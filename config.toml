@@ -1,0 +1,5 @@
+UseTLS = true
+HTTPPort = 8080
+HTTPSPort = 1443
+PemFile = "tls/server.pem"
+KeyFile = "tls/server.key"
