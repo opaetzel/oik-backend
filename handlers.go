@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -12,8 +12,18 @@ import (
 func AllUnits(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
-	//TODO: get units from db, without content
-	fmt.Fprint(w, "[]")
+	if units, err := GetAllUnits(); err != nil {
+		apiErr := jsonErr{Code: http.StatusInternalServerError, Message: "Could not receive units. See log for details."}
+		log.Println(err)
+		if err := json.NewEncoder(w).Encode(apiErr); err != nil {
+			panic(err)
+		}
+	} else {
+		if err := json.NewEncoder(w).Encode(units); err != nil {
+			panic(err)
+		}
+	}
+
 }
 
 func PageById(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -12,36 +13,36 @@ var db *sqlx.DB
 
 var schema = `
 CREATE TABLE IF NOT EXISTS units (
-	title varchar,
+	unit_title varchar,
 	published boolean,
 	rotate_image_id integer,
 	user_id integer,
-	id SERIAL PRIMARY KEY
+	unit_id SERIAL PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS pages (
-	title varchar(255),
+	page_title varchar(255),
 	unit_id integer,
-	id SERIAL PRIMARY KEY
+	page_id SERIAL PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS rows (
 	left_column_id integer,
 	right_column_id integer,
 	page_id integer,
-	id SERIAL PRIMARY KEY
+	row_id SERIAL PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS columns (
 	image_id integer,
 	text_id integer,
-	id SERIAL PRIMARY KEY
+	column_id SERIAL PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS texts (
 	markdown text,
 	html text,
-	id SERIAL PRIMARY KEY
+	text_id SERIAL PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS rotate_images ( 
@@ -49,14 +50,14 @@ CREATE TABLE IF NOT EXISTS rotate_images (
 	num integer,
 	caption text,
 	credits text,
-	id SERIAL PRIMARY KEY
+	rotate_image_id SERIAL PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS images ( 
 	path varchar(255),
 	caption text,
 	credits text,
-	id SERIAL PRIMARY KEY
+	image_id SERIAL PRIMARY KEY
 );
 `
 
@@ -68,4 +69,32 @@ func initDB(dbname string, user string, pw string) {
 	}
 
 	db.MustExec(schema)
+}
+
+func GetAllUnits() ([]Unit, error) {
+	rows, err := db.Query("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id GROUP BY units.unit_id;")
+	if err != nil {
+		return nil, err
+	}
+	units := make([]Unit, 0)
+	for rows.Next() {
+		var unit_title string
+		var published bool
+		var rotate_image_id int
+		var user_id int
+		var unit_id int
+		var pages_arr string
+
+		err = rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &unit_id, &pages_arr)
+		if err != nil {
+			return nil, err
+		}
+		var pages []int
+		err = json.Unmarshal([]byte(pages_arr), &pages)
+		if err != nil {
+			return nil, err
+		}
+		units = append(units, Unit{unit_title, nil, pages, published, user_id, unit_id})
+	}
+	return units, nil
 }
