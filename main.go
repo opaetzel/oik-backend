@@ -13,11 +13,14 @@ import (
 )
 
 type Config struct {
-	UseTLS    bool
-	HTTPPort  int
-	HTTPSPort int
-	PemFile   string
-	KeyFile   string
+	UseTLS     bool
+	HTTPPort   int
+	HTTPSPort  int
+	PemFile    string
+	KeyFile    string
+	DBName     string
+	DBUser     string
+	DBPassword string
 }
 
 func main() {
@@ -30,6 +33,8 @@ func main() {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
+
+	initDB(conf.DBName, conf.DBUser, conf.DBPassword)
 
 	router := NewRouter()
 	http.Handle("/", router)

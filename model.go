@@ -8,8 +8,8 @@ type Image struct {
 }
 
 type RotateImage struct {
-	basepath string
-	num      int
+	Basepath string
+	Num      int
 	Caption  string `json:"caption"`
 	Credits  string `json:"credits"`
 	ID       int    `json:"id"`

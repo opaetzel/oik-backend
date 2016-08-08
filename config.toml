@@ -3,3 +3,6 @@ HTTPPort = 8080
 HTTPSPort = 1443
 PemFile = "tls/server.pem"
 KeyFile = "tls/server.key"
+DBName = "oik_backend"
+DBUser = "oik"
+DBPassword = "changeme"
