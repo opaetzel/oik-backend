@@ -98,3 +98,21 @@ func GetAllUnits() ([]Unit, error) {
 	}
 	return units, nil
 }
+
+func GetPageById(id int) (*Page, error) {
+	query := `
+		SELECT pages.*, json_agg(rows.*) AS row, json_agg(columns.*) AS column, json_agg(images.*) AS image, json_agg(texts.*) AS text FROM pages 
+			LEFT JOIN rows ON rows.page_id = pages.page_id
+			LEFT JOIN columns ON columns.column_id = rows.left_column_id OR columns.column_id = rows.right_column_id
+			LEFT JOIN texts ON texts.text_id = columns.text_id
+			LEFT JOIN images ON images.image_id = columns.image_id
+			GROUP BY pages.page_id, rows.row_id, columns.row_id
+		WHERE pages.page_id=$1;
+		`
+	_, err := db.Query(query, id)
+	if err != nil {
+		return nil, err
+	}
+	//TODO: parse rows
+	return nil, nil
+}
