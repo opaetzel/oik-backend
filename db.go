@@ -89,17 +89,17 @@ func GetAllUnits() ([]Unit, error) {
 	return units, nil
 }
 
-func GetPageById(id int) (*Page, error) {
+func GetPageById(id int) (Page, error) {
 	query := `
-		SELECT pages.*, json_agg(rows.*) AS row, FROM pages 
-			LEFT JOIN rows ON rows.page_id = pages.page_id
-			GROUP BY pages.page_id
+		SELECT pages.*, json_agg(rows.*) AS row FROM pages 
+		LEFT JOIN rows ON rows.page_id = pages.page_id
 		WHERE pages.page_id=$1;
+		GROUP BY pages.page_id
 		`
 	_, err := db.Query(query, id)
 	if err != nil {
 		return nil, err
 	}
-	//TODO: parse rows
+	fo
 	return nil, nil
 }
