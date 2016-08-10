@@ -7,7 +7,9 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 )
 
@@ -83,4 +85,21 @@ var PageCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusCreated)
 	}
+})
+
+//Remove this Handler later, or better replace by Login handler
+
+var GetTokenHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := make(jwt.MapClaims)
+
+	claims["groups"] = []string{"admin"}
+	claims["name"] = "Felix Klein"
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
+
+	token.Claims = claims
+
+	tokenString, _ := token.SignedString(mySigningKey)
+
+	w.Write([]byte(tokenString))
 })

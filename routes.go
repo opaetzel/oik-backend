@@ -30,4 +30,10 @@ var routes = Routes{
 		"/pages",
 		PageCreate,
 	},
+	Route{
+		"GetToken",
+		"GET",
+		"/token",
+		GetTokenHandler,
+	},
 }
