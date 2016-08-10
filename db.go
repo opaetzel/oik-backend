@@ -91,15 +91,20 @@ func GetAllUnits() ([]Unit, error) {
 
 func GetPageById(id int) (Page, error) {
 	query := `
-		SELECT pages.*, json_agg(rows.*) AS row FROM pages 
+		SELECT pages.page_title, pages.page_id, json_agg(rows.*) AS rows FROM pages 
 		LEFT JOIN rows ON rows.page_id = pages.page_id
-		WHERE pages.page_id=$1;
-		GROUP BY pages.page_id
+		WHERE pages.page_id=$1
+		GROUP BY pages.page_id;
 		`
-	_, err := db.Query(query, id)
-	if err != nil {
-		return nil, err
+	row := db.QueryRow(query, id)
+	var pageTitle, jsonRows string
+	var pageId int
+	if err := row.Scan(&pageTitle, &pageId, &jsonRows); err != nil {
+		return Page{}, err
 	}
-	fo
-	return nil, nil
+	var rows []Row
+	if err := json.Unmarshal([]byte(jsonRows), &rows); err != nil {
+		return Page{}, err
+	}
+	return Page{pageTitle, rows, pageId}, nil
 }

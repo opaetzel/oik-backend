@@ -36,10 +36,16 @@ func PageById(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 	} else {
-		//TODO: get from db, if not found: return err 404
-		page := Page{"Sample page", nil, pageId}
-		if err := json.NewEncoder(w).Encode(page); err != nil {
-			panic(err)
+		if page, err := GetPageById(pageId); err != nil {
+			apiErr := jsonErr{Code: http.StatusInternalServerError, Message: "Error getting page from DB. See log for details."}
+			log.Println(err)
+			if err := json.NewEncoder(w).Encode(apiErr); err != nil {
+				panic(err)
+			}
+		} else {
+			if err := json.NewEncoder(w).Encode(page); err != nil {
+				panic(err)
+			}
 		}
 	}
 }
