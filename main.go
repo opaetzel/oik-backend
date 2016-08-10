@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
+	"github.com/gorilla/handlers"
 )
 
 type Config struct {
@@ -40,7 +41,7 @@ func main() {
 	http.Handle("/", router)
 	if conf.UseTLS {
 		go func() {
-			if err := http.ListenAndServeTLS(":"+strconv.Itoa(conf.HTTPSPort), conf.PemFile, conf.KeyFile, nil); err != nil {
+			if err := http.ListenAndServeTLS(":"+strconv.Itoa(conf.HTTPSPort), conf.PemFile, conf.KeyFile, handlers.LoggingHandler(os.Stdout, router)); err != nil {
 				log.Fatalf("ListenAndServeTLS error: %v", err)
 			}
 		}()
