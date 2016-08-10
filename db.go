@@ -84,27 +84,70 @@ func GetAllUnits() ([]Unit, error) {
 		if err != nil {
 			return nil, err
 		}
-		units = append(units, Unit{unit_title, nil, pages, published, user_id, unit_id})
+		units = append(units, Unit{unit_title, rotate_image_id, pages, published, user_id, unit_id})
 	}
 	return units, nil
 }
 
 func GetPageById(id int) (Page, error) {
 	query := `
-		SELECT pages.page_title, pages.page_id, json_agg(rows.*) AS rows FROM pages 
+		SELECT pages.page_title, pages.page_id, pages.unit_id, json_agg(rows.*) AS rows FROM pages 
 		LEFT JOIN rows ON rows.page_id = pages.page_id
 		WHERE pages.page_id=$1
 		GROUP BY pages.page_id;
 		`
 	row := db.QueryRow(query, id)
 	var pageTitle, jsonRows string
-	var pageId int
-	if err := row.Scan(&pageTitle, &pageId, &jsonRows); err != nil {
+	var pageId, unitId int
+	if err := row.Scan(&pageTitle, &pageId, &unitId, &jsonRows); err != nil {
 		return Page{}, err
 	}
 	var rows []Row
 	if err := json.Unmarshal([]byte(jsonRows), &rows); err != nil {
 		return Page{}, err
 	}
-	return Page{pageTitle, rows, pageId}, nil
+	return Page{pageTitle, rows, unitId, pageId}, nil
+}
+
+func InsertUnit(unit Unit) error {
+	stmt, err := db.Prepare("INSERT INTO units (unit_title, published, rotate_image_id, user_id) VALUES ($1, $2, $3, $4)")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(unit.Title, unit.Published, unit.UnitImageID, unit.UserId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func InsertPage(page Page) error {
+	stmt, err := db.Prepare("INSERT INTO pages (page_title, unit_id) VALUES ($1, $2);")
+	if err != nil {
+		return err
+	}
+	res, err := stmt.Exec(page.Title, page.UnitID)
+	if err != nil {
+		return err
+	}
+	pageId, err := res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, err = tx.Prepare("INSERT INTO rows (left_markdown, left_html, right_markdown, right_html, page_id) VALUES ($1, $2, $3, $4, $5);")
+	for _, row := range page.Rows {
+		_, err := stmt.Exec(row.LeftMarkdown, row.LeftHtml, row.RightMarkdown, row.RightHtml, pageId)
+		if err != nil {
+			return err
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
 }

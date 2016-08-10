@@ -26,18 +26,19 @@ type Row struct {
 }
 
 type Page struct {
-	Title string `json:"title" db:"title"`
-	Rows  []Row  `json:"rows" db:"rows"`
-	ID    int    `json:"id" db:"id"`
+	Title  string `json:"title" db:"title"`
+	Rows   []Row  `json:"rows" db:"rows"`
+	UnitID int    `json:"unit_id" db:"unit_id"`
+	ID     int    `json:"id" db:"id"`
 }
 
 type Unit struct {
-	Title     string       `json:"title" db:"title"`
-	UnitImage *RotateImage `json:"unitimage" db:"unitimage"`
-	PageIds   []int        `json:"pageids" db:"pageids"`
-	Published bool         `json:"published" db:"published"`
-	UserId    int          `json:"userid" db:"userid"`
-	ID        int          `json:"id" db:"id"`
+	Title       string `json:"title" db:"title"`
+	UnitImageID int    `json:"rotate_image_id" db:"rotate_image_id"`
+	PageIds     []int  `json:"pageids" db:"pageids"`
+	Published   bool   `json:"published" db:"published"`
+	UserId      int    `json:"userid" db:"userid"`
+	ID          int    `json:"id" db:"id"`
 }
 
 func (r *Image) UnmarshalJSON(data []byte) error {
@@ -51,7 +52,9 @@ func (r *Image) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	r.ID = aux.MyID
+	if r.ID == 0 {
+		r.ID = aux.MyID
+	}
 	return nil
 }
 
@@ -66,7 +69,9 @@ func (r *RotateImage) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	r.ID = aux.MyID
+	if r.ID == 0 {
+		r.ID = aux.MyID
+	}
 	return nil
 }
 
@@ -81,7 +86,9 @@ func (r *Row) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	r.ID = aux.MyID
+	if r.ID == 0 {
+		r.ID = aux.MyID
+	}
 	return nil
 }
 
@@ -96,7 +103,9 @@ func (r *Page) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	r.ID = aux.MyID
+	if r.ID == 0 {
+		r.ID = aux.MyID
+	}
 	return nil
 }
 
@@ -111,6 +120,8 @@ func (r *Unit) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	r.ID = aux.MyID
+	if r.ID == 0 {
+		r.ID = aux.MyID
+	}
 	return nil
 }

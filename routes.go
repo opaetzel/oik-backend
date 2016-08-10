@@ -24,4 +24,10 @@ var routes = Routes{
 		"/pages/{pageId}",
 		PageById,
 	},
+	Route{
+		"PageCreate",
+		"POST",
+		"/pages",
+		PageCreate,
+	},
 }
