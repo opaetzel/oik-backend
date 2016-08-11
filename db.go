@@ -51,9 +51,10 @@ CREATE TABLE IF NOT EXISTS images (
 );
 
 CREATE TABLE IF NOT EXISTS users (
-	username varchar(255)
-	salt varchar(255)
-	pwhash varchar(255)
+	username varchar(255),
+	salt varchar(255),
+	pwhash varchar(255),
+	active boolean,
 	user_id SERIAL PRIMARY KEY
 )
 `
@@ -166,4 +167,16 @@ func GetUser(username string) (User, error) {
 		return User{}, err
 	}
 	return u, nil
+}
+
+func InsertUser(user User) error {
+	stmt, err := db.Prepare("INSERT INTO users (username, salt, pwhash, active) VALUES ($1, $2, $3, $4);")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(user.Username, user.Salt, user.PWHash, user.Active)
+	if err != nil {
+		return err
+	}
+	return nil
 }

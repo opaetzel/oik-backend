@@ -16,6 +16,7 @@ type User struct {
 	Groups   []string `json:"groups" db:"groups"`
 	Salt     string   `json:"salt" db:"salt"`
 	PWHash   string   `json:"pwhash" db:"pwhash"`
+	Active   bool     `json:"active" db:"active"`
 	ID       int      `json:"id" db:"id"`
 }
 

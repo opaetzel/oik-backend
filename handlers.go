@@ -160,7 +160,7 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 			internalError(w, r, err)
 			return
 		}
-		if bytes.Equal(pwHashBytes, hash) {
+		if bytes.Equal(pwHashBytes, hash) && user.Active {
 			token := jwt.New(jwt.SigningMethodHS256)
 			claims := make(jwt.MapClaims)
 
@@ -177,5 +177,37 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 			loginFailed()
 			return
 		}
+	}
+})
+
+var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var login LoginStruct
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 4194304))
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if err := r.Body.Close(); err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if err := json.Unmarshal(body, &login); err != nil {
+		w.WriteHeader(422)
+		log.Println(err)
+		apiErr := jsonErr{Code: 422, Message: "Error parsing input. See log for details."}
+		if err := json.NewEncoder(w).Encode(apiErr); err != nil {
+			panic(err)
+		}
+	}
+	salt, pwhash, err := HashNewPW(login.Password)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	b64hash := base64.StdEncoding.EncodeToString(pwhash)
+	user := User{login.Username, []string{"student"}, salt, b64hash, false, 0}
+	if err := InsertUser(user); err != nil {
+		internalError(w, r, err)
+		return
 	}
 })
