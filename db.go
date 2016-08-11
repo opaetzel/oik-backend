@@ -49,6 +49,13 @@ CREATE TABLE IF NOT EXISTS images (
 	credits text,
 	image_id SERIAL PRIMARY KEY
 );
+
+CREATE TABLE IF NOT EXISTS users (
+	username varchar(255)
+	salt varchar(255)
+	pwhash varchar(255)
+	user_id SERIAL PRIMARY KEY
+)
 `
 
 func initDB(dbname string, user string, pw string) {
@@ -150,4 +157,13 @@ func InsertPage(page Page) error {
 		return err
 	}
 	return nil
+}
+
+func GetUser(username string) (User, error) {
+	var u User
+	err := db.QueryRowx("SELECT * FROM users WHERE username=$1").StructScan(&u)
+	if err != nil {
+		return User{}, err
+	}
+	return u, nil
 }

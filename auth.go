@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 
 	"golang.org/x/crypto/scrypt"
 
@@ -11,11 +12,33 @@ import (
 )
 
 type User struct {
-	Name   string
-	Groups []string
-	Salt   string
-	PWHash string
-	ID     int
+	Username string   `json:"username" db:"username"`
+	Groups   []string `json:"groups" db:"groups"`
+	Salt     string   `json:"salt" db:"salt"`
+	PWHash   string   `json:"pwhash" db:"pwhash"`
+	ID       int      `json:"id" db:"id"`
+}
+
+type LoginStruct struct {
+	Username string `json:"username" db:"username"`
+	Password string `json:"password" db:"password"`
+}
+
+func (r *User) UnmarshalJSON(data []byte) error {
+	type Alias User
+	aux := &struct {
+		MyID int `json:"user_id"`
+		*Alias
+	}{
+		Alias: (*Alias)(r),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if r.ID == 0 {
+		r.ID = aux.MyID
+	}
+	return nil
 }
 
 var mySigningKey = []byte("secret")

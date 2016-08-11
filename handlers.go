@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"io/ioutil"
@@ -12,6 +14,15 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
 )
+
+func internalError(w http.ResponseWriter, r *http.Request, err error) {
+	w.WriteHeader(http.StatusInternalServerError)
+	apiErr := jsonErr{Code: http.StatusInternalServerError, Message: "Error getting page from DB. See log for details."}
+	log.Println(err)
+	if err := json.NewEncoder(w).Encode(apiErr); err != nil {
+		panic(err)
+	}
+}
 
 var AllUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -63,10 +74,12 @@ var PageCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	//Set limit to 4MB, maybe make configurable later
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 4194304))
 	if err != nil {
-		panic(err)
+		internalError(w, r, err)
+		return
 	}
 	if err := r.Body.Close(); err != nil {
-		panic(err)
+		internalError(w, r, err)
+		return
 	}
 	if err := json.Unmarshal(body, &page); err != nil {
 		w.WriteHeader(422)
@@ -102,4 +115,67 @@ var GetTokenHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	tokenString, _ := token.SignedString(mySigningKey)
 
 	w.Write([]byte(tokenString))
+})
+
+var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	loginFailed := func() {
+		w.WriteHeader(http.StatusUnauthorized)
+		apiErr := jsonErr{Code: http.StatusUnauthorized, Message: "Wrong username or password"}
+		if err := json.NewEncoder(w).Encode(apiErr); err != nil {
+			panic(err)
+		}
+	}
+
+	var login LoginStruct
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 4194304))
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if err := r.Body.Close(); err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if err := json.Unmarshal(body, &login); err != nil {
+		w.WriteHeader(422)
+		log.Println(err)
+		apiErr := jsonErr{Code: 422, Message: "Error parsing input. See log for details."}
+		if err := json.NewEncoder(w).Encode(apiErr); err != nil {
+			panic(err)
+		}
+	} else {
+		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		user, err := GetUser(login.Username)
+		if err != nil {
+			loginFailed()
+			return
+		}
+		hash, err := HashPWWithSaltB64(login.Password, user.Salt)
+		if err != nil {
+			loginFailed()
+			return
+		}
+		pwHashBytes, err := base64.StdEncoding.DecodeString(user.PWHash)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		if bytes.Equal(pwHashBytes, hash) {
+			token := jwt.New(jwt.SigningMethodHS256)
+			claims := make(jwt.MapClaims)
+
+			claims["groups"] = user.Groups
+			claims["name"] = user.Username
+			claims["exp"] = time.Now().Add(time.Hour * 12).Unix()
+
+			token.Claims = claims
+
+			tokenString, _ := token.SignedString(mySigningKey)
+
+			w.Write([]byte(tokenString))
+		} else {
+			loginFailed()
+			return
+		}
+	}
 })

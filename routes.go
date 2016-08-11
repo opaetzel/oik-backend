@@ -31,9 +31,9 @@ var routes = Routes{
 		PageCreate,
 	},
 	Route{
-		"GetToken",
-		"GET",
-		"/token",
-		GetTokenHandler,
+		"Login",
+		"POST",
+		"/login",
+		LoginHandler,
 	},
 }
