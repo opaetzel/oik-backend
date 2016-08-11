@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -125,7 +126,7 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 			panic(err)
 		}
 	}
-
+	fmt.Println("bla")
 	var login LoginStruct
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 4194304))
 	if err != nil {
@@ -136,6 +137,7 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 		internalError(w, r, err)
 		return
 	}
+	fmt.Println("try to unmarshal")
 	if err := json.Unmarshal(body, &login); err != nil {
 		w.WriteHeader(422)
 		log.Println(err)
@@ -144,22 +146,28 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 			panic(err)
 		}
 	} else {
+		fmt.Println("unmarshal success")
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		user, err := GetUser(login.Username)
 		if err != nil {
+			fmt.Println("did not get user")
+			fmt.Println(err)
 			loginFailed()
 			return
 		}
+		fmt.Println("got user")
 		hash, err := HashPWWithSaltB64(login.Password, user.Salt)
 		if err != nil {
 			loginFailed()
 			return
 		}
+		log.Println("hashed pw")
 		pwHashBytes, err := base64.StdEncoding.DecodeString(user.PWHash)
 		if err != nil {
 			internalError(w, r, err)
 			return
 		}
+		log.Println(pwHashBytes, hash)
 		if bytes.Equal(pwHashBytes, hash) && user.Active {
 			token := jwt.New(jwt.SigningMethodHS256)
 			claims := make(jwt.MapClaims)

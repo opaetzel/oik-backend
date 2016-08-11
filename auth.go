@@ -17,7 +17,7 @@ type User struct {
 	Salt     string   `json:"salt" db:"salt"`
 	PWHash   string   `json:"pwhash" db:"pwhash"`
 	Active   bool     `json:"active" db:"active"`
-	ID       int      `json:"id" db:"id"`
+	ID       int      `json:"id" db:"user_id"`
 }
 
 type LoginStruct struct {

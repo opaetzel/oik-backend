@@ -162,7 +162,7 @@ func InsertPage(page Page) error {
 
 func GetUser(username string) (User, error) {
 	var u User
-	err := db.QueryRowx("SELECT * FROM users WHERE username=$1").StructScan(&u)
+	err := db.QueryRowx("SELECT * FROM users WHERE username=$1", username).StructScan(&u)
 	if err != nil {
 		return User{}, err
 	}

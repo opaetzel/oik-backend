@@ -36,4 +36,10 @@ var routes = Routes{
 		"/login",
 		LoginHandler,
 	},
+	Route{
+		"Register",
+		"POST",
+		"/register",
+		RegisterHandler,
+	},
 }
