@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -79,11 +80,7 @@ func initDB(dbname string, user string, pw string) {
 	db.MustExec(schema)
 }
 
-func GetAllUnits() ([]Unit, error) {
-	rows, err := db.Query("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id GROUP BY units.unit_id;")
-	if err != nil {
-		return nil, err
-	}
+func parseUnits(rows *sql.Rows) ([]Unit, error) {
 	units := make([]Unit, 0)
 	for rows.Next() {
 		var unit_title string
@@ -93,7 +90,7 @@ func GetAllUnits() ([]Unit, error) {
 		var unit_id int
 		var pages_arr string
 
-		err = rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &unit_id, &pages_arr)
+		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &unit_id, &pages_arr)
 		if err != nil {
 			return nil, err
 		}
@@ -105,6 +102,30 @@ func GetAllUnits() ([]Unit, error) {
 		units = append(units, Unit{unit_title, rotate_image_id, pages, published, user_id, unit_id})
 	}
 	return units, nil
+}
+
+func GetAllUnits() ([]Unit, error) {
+	rows, err := db.Query("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id GROUP BY units.unit_id;")
+	if err != nil {
+		return nil, err
+	}
+	return parseUnits(rows)
+}
+
+func GetUserUnits(userId int) ([]Unit, error) {
+	rows, err := db.Query("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id WHERE units.user_id=$1 GROUP BY units.unit_id;", userId)
+	if err != nil {
+		return nil, err
+	}
+	return parseUnits(rows)
+}
+
+func GetPublishedUnits() ([]Unit, error) {
+	rows, err := db.Query("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id WHERE units.published=true GROUP BY units.unit_id;")
+	if err != nil {
+		return nil, err
+	}
+	return parseUnits(rows)
 }
 
 func GetPageById(id int) (Page, error) {

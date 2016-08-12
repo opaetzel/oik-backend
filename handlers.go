@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,25 +12,61 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 )
 
 var AllUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	if units, err := GetAllUnits(); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		apiErr := jsonErr{Code: http.StatusInternalServerError, Message: "Could not receive units. See log for details."}
-		log.Println(err)
-		if err := json.NewEncoder(w).Encode(apiErr); err != nil {
-			panic(err)
-		}
+		internalError(w, r, err)
 	} else {
 		w.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(w).Encode(units); err != nil {
 			panic(err)
 		}
 	}
+})
 
+var UserUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	userIdStr := mux.Vars(r)["userId"]
+	userId, err := strconv.Atoi(userIdStr)
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	user := context.Get(r, "user")
+	claims, ok := user.(*jwt.Token).Claims.(jwt.MapClaims)
+	claimUserId, ok := claims["uid"].(int)
+	if !ok {
+		internalError(w, r, errors.New("claimUserId not string"))
+		return
+	}
+	if claimUserId != userId {
+		unauthorized(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	if units, err := GetUserUnits(userId); err != nil {
+		internalError(w, r, err)
+	} else {
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(units); err != nil {
+			panic(err)
+		}
+	}
+})
+
+var PublishedUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	if units, err := GetPublishedUnits(); err != nil {
+		internalError(w, r, err)
+	} else {
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(units); err != nil {
+			panic(err)
+		}
+	}
 })
 
 var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -40,12 +77,7 @@ var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		if page, err := GetPageById(pageId); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			apiErr := jsonErr{Code: http.StatusInternalServerError, Message: "Error getting page from DB. See log for details."}
-			log.Println(err)
-			if err := json.NewEncoder(w).Encode(apiErr); err != nil {
-				panic(err)
-			}
+			internalError(w, r, err)
 		} else {
 			w.WriteHeader(http.StatusOK)
 			if err := json.NewEncoder(w).Encode(page); err != nil {
@@ -69,11 +101,7 @@ var PageCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := InsertPage(page); err != nil {
-		apiErr := jsonErr{Code: http.StatusInternalServerError, Message: "Error inserting to DB"}
-		w.WriteHeader(http.StatusInternalServerError)
-		if err := json.NewEncoder(w).Encode(apiErr); err != nil {
-			log.Println(err)
-		}
+		internalError(w, r, err)
 	} else {
 		w.WriteHeader(http.StatusCreated)
 	}
@@ -128,6 +156,7 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 			claims["groups"] = user.Groups
 			claims["name"] = user.Username
 			claims["exp"] = time.Now().Add(time.Hour * 12).Unix()
+			claims["uid"] = user.ID
 
 			token.Claims = claims
 
@@ -176,16 +205,10 @@ var UnitCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		notParsable(w, r, err)
 		return
 	} else {
-		InsertUnit(unit)
+		err := InsertUnit(unit)
+		if err != nil {
+			internalError(w, r, err)
+		}
+		w.WriteHeader(http.StatusCreated)
 	}
-})
-
-var UserUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	//TODO
-
-})
-
-var PublishedUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	//TODO
-
 })
