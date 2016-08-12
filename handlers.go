@@ -69,7 +69,45 @@ var PublishedUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	}
 })
 
-var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var UserPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	user := context.Get(r, "user")
+	vars := mux.Vars(r)
+	userId, err := strconv.Atoi(vars["userId"])
+	if err != nil {
+		notParsable(w, r, err)
+	}
+	pageId, err := strconv.Atoi(vars["pageId"])
+	if err != nil {
+		notParsable(w, r, err)
+	}
+	claims, ok := user.(*jwt.Token).Claims.(jwt.MapClaims)
+	if ok {
+		claimId, ok := claims["uid"].(int)
+		if !ok {
+			internalError(w, r, errors.New("could not cast uid to int"))
+			return
+		}
+		if claimId != userId {
+			unauthorized(w, r)
+			return
+		}
+		if page, err := GetUserPageById(userId, pageId); err != nil {
+			internalError(w, r, err)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			if err := json.NewEncoder(w).Encode(page); err != nil {
+				panic(err)
+			}
+		}
+
+	} else {
+		internalError(w, r, errors.New("could not read claims"))
+		return
+	}
+})
+
+var AdminPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	if pageId, err := strconv.Atoi(vars["pageId"]); err != nil {
@@ -77,6 +115,24 @@ var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		if page, err := GetPageById(pageId); err != nil {
+			internalError(w, r, err)
+		} else {
+			w.WriteHeader(http.StatusOK)
+			if err := json.NewEncoder(w).Encode(page); err != nil {
+				panic(err)
+			}
+		}
+	}
+})
+
+var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	if pageId, err := strconv.Atoi(vars["pageId"]); err != nil {
+		notParsable(w, r, err)
+		return
+	} else {
+		if page, err := GetPublicPageById(pageId); err != nil {
 			internalError(w, r, err)
 		} else {
 			w.WriteHeader(http.StatusOK)

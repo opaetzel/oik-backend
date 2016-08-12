@@ -18,13 +18,19 @@ var adminRoutes = Routes{
 		"/allunits",
 		AllUnits,
 	},
+	Route{
+		"AdminPageById",
+		"GET",
+		"/allunits",
+		AdminPageById,
+	},
 }
 
 var authRoutes = Routes{
 	Route{
 		"UnitCreate",
 		"POST",
-		"pages",
+		"/units",
 		UnitCreate,
 	},
 	Route{
@@ -36,8 +42,14 @@ var authRoutes = Routes{
 	Route{
 		"UserUnits",
 		"GET",
-		"/{userID}/units",
+		"/{userId}/units",
 		UserUnits,
+	},
+	Route{
+		"UserPageById",
+		"GET",
+		"/{userId}/page/{pageId}",
+		UserPageById,
 	},
 }
 

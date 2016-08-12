@@ -128,14 +128,7 @@ func GetPublishedUnits() ([]Unit, error) {
 	return parseUnits(rows)
 }
 
-func GetPageById(id int) (Page, error) {
-	query := `
-		SELECT pages.page_title, pages.page_id, pages.unit_id, json_agg(rows.*) AS rows FROM pages 
-		LEFT JOIN rows ON rows.page_id = pages.page_id
-		WHERE pages.page_id=$1
-		GROUP BY pages.page_id;
-		`
-	row := db.QueryRow(query, id)
+func parsePage(row *sql.Row) (Page, error) {
 	var pageTitle, jsonRows string
 	var pageId, unitId int
 	if err := row.Scan(&pageTitle, &pageId, &unitId, &jsonRows); err != nil {
@@ -146,6 +139,42 @@ func GetPageById(id int) (Page, error) {
 		return Page{}, err
 	}
 	return Page{pageTitle, rows, unitId, pageId}, nil
+}
+
+func GetPublicPageById(id int) (Page, error) {
+	query := `
+		SELECT pages.page_title, pages.page_id, pages.unit_id, json_agg(rows.*) AS rows FROM pages 
+		LEFT JOIN rows ON rows.page_id = pages.page_id
+		RIGHT JOIN units ON units.unit_id = pages.unit_id
+		WHERE pages.page_id=$1 AND units.published = true
+		GROUP BY pages.page_id;
+		`
+	row := db.QueryRow(query, id)
+	return parsePage(row)
+}
+
+func GetPageById(id int) (Page, error) {
+	query := `
+		SELECT pages.page_title, pages.page_id, pages.unit_id, json_agg(rows.*) AS rows FROM pages 
+		LEFT JOIN rows ON rows.page_id = pages.page_id
+		RIGHT JOIN units ON units.unit_id = pages.unit_id
+		WHERE pages.page_id=$1
+		GROUP BY pages.page_id;
+		`
+	row := db.QueryRow(query, id)
+	return parsePage(row)
+}
+
+func GetUserPageById(pageId, userId int) (Page, error) {
+	query := `
+		SELECT pages.page_title, pages.page_id, pages.unit_id, json_agg(rows.*) AS rows FROM pages 
+		LEFT JOIN rows ON rows.page_id = pages.page_id
+		RIGHT JOIN units ON units.unit_id = pages.unit_id
+		WHERE pages.page_id=$1 AND units.user_id = $2
+		GROUP BY pages.page_id;
+		`
+	row := db.QueryRow(query, pageId, userId)
+	return parsePage(row)
 }
 
 func InsertUnit(unit Unit) error {
