@@ -11,24 +11,48 @@ type Route struct {
 
 type Routes []Route
 
-var routes = Routes{
+var adminRoutes = Routes{
 	Route{
 		"AllUnits",
 		"GET",
 		"/allunits",
-		jwtMiddleware.Handler(AllUnits),
+		AllUnits,
 	},
+}
+
+var authRoutes = Routes{
 	Route{
-		"PageById",
-		"GET",
-		"/pages/{pageId}",
-		PageById,
+		"UnitCreate",
+		"POST",
+		"pages",
+		UnitCreate,
 	},
 	Route{
 		"PageCreate",
 		"POST",
 		"/pages",
 		PageCreate,
+	},
+	Route{
+		"UserUnits",
+		"GET",
+		"/{userID}/units",
+		UserUnits,
+	},
+}
+
+var publicRoutes = Routes{
+	Route{
+		"PublishedUnits",
+		"GET",
+		"/units",
+		PublishedUnits,
+	},
+	Route{
+		"PageById",
+		"GET",
+		"/pages/{pageId}",
+		PageById,
 	},
 	Route{
 		"Login",

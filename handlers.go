@@ -219,3 +219,17 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 		return
 	}
 })
+
+var UnitCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	//TODO
+})
+
+var UserUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	//TODO
+
+})
+
+var PublishedUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	//TODO
+
+})
