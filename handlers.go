@@ -16,15 +16,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func internalError(w http.ResponseWriter, r *http.Request, err error) {
-	w.WriteHeader(http.StatusInternalServerError)
-	apiErr := jsonErr{Code: http.StatusInternalServerError, Message: "Error getting page from DB. See log for details."}
-	log.Println(err)
-	if err := json.NewEncoder(w).Encode(apiErr); err != nil {
-		panic(err)
-	}
-}
-
 var AllUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	if units, err := GetAllUnits(); err != nil {
@@ -99,23 +90,6 @@ var PageCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	} else {
 		w.WriteHeader(http.StatusCreated)
 	}
-})
-
-//Remove this Handler later, or better replace by Login handler
-
-var GetTokenHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	token := jwt.New(jwt.SigningMethodHS256)
-	claims := make(jwt.MapClaims)
-
-	claims["groups"] = []string{"admin"}
-	claims["name"] = "Felix Klein"
-	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
-
-	token.Claims = claims
-
-	tokenString, _ := token.SignedString(mySigningKey)
-
-	w.Write([]byte(tokenString))
 })
 
 var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

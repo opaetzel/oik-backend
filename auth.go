@@ -4,11 +4,14 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"net/http"
 
 	"golang.org/x/crypto/scrypt"
 
 	"github.com/auth0/go-jwt-middleware"
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/context"
 )
 
 type User struct {
@@ -23,6 +26,15 @@ type User struct {
 type LoginStruct struct {
 	Username string `json:"username" db:"username"`
 	Password string `json:"password" db:"password"`
+}
+
+type RequireRole struct {
+	handler http.Handler
+	role    string
+}
+
+func NewRequireRole(handler http.Handler, role string) *RequireRole {
+	return &RequireRole{handler, role}
 }
 
 func (r *User) UnmarshalJSON(data []byte) error {
@@ -40,6 +52,37 @@ func (r *User) UnmarshalJSON(data []byte) error {
 		r.ID = aux.MyID
 	}
 	return nil
+}
+
+//this only checks if user is in role admin, the jwt has to be checked before this
+func (rr *RequireRole) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	//check if is in role
+	user := context.Get(r, "user")
+	claims, ok := user.(*jwt.Token).Claims.(jwt.MapClaims)
+	if ok {
+		claimGroups, ok := claims["groups"].([]interface{})
+		if !ok {
+			internalError(w, r, errors.New("could not cast groups(1)"))
+			return
+		}
+		groups := make([]string, len(claimGroups))
+		for i, gr := range claimGroups {
+			group, ok := gr.(string)
+			if !ok {
+				internalError(w, r, errors.New("could not cast groups(2)"))
+				return
+			}
+			groups[i] = group
+		}
+		if stringInSlice(rr.role, groups) {
+			rr.handler.ServeHTTP(w, r)
+		} else {
+			unauthorized(w, r)
+			return
+		}
+	} else {
+		internalError(w, r, errors.New("could not read claims"))
+	}
 }
 
 var mySigningKey = []byte("secret")

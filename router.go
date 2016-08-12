@@ -33,7 +33,7 @@ func NewRouter() *mux.Router {
 	//register admin routes, need to be admin here. Maybe write another own middleware...
 	for _, route := range adminRoutes {
 		var handler http.Handler
-		handler = jwtMiddleware.Handler(route.Handler)
+		handler = jwtMiddleware.Handler(NewRequireRole(route.Handler, "admin"))
 		registerRoute(router, route, handler)
 	}
 	fs := http.Dir("static/")

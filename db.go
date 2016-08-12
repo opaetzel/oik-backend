@@ -56,7 +56,17 @@ CREATE TABLE IF NOT EXISTS users (
 	pwhash varchar(255),
 	active boolean,
 	user_id SERIAL PRIMARY KEY
-)
+);
+
+CREATE TABLE IF NOT EXISTS groups (
+	group_name varchar(255),
+	group_id SERIAL PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS user_groups (
+	user_id integer,
+	group_id integer
+);
 `
 
 func initDB(dbname string, user string, pw string) {
@@ -161,11 +171,19 @@ func InsertPage(page Page) error {
 }
 
 func GetUser(username string) (User, error) {
-	var u User
-	err := db.QueryRowx("SELECT * FROM users WHERE username=$1", username).StructScan(&u)
+	row := db.QueryRow("SELECT users.*, json_agg(groups.group_name) FROM users LEFT JOIN user_groups ON users.user_id=user_groups.user_id LEFT JOIN groups ON user_groups.group_id=groups.group_id WHERE username=$1 GROUP BY users.user_id", username)
+	var dbUsername, salt, pwhash, jsonGroups string
+	var active bool
+	var id int
+	err := row.Scan(&dbUsername, &salt, &pwhash, &active, &id, &jsonGroups)
 	if err != nil {
 		return User{}, err
 	}
+	var groups []string
+	if err := json.Unmarshal([]byte(jsonGroups), &groups); err != nil {
+		return User{}, err
+	}
+	u := User{dbUsername, groups, salt, pwhash, active, id}
 	return u, nil
 }
 
