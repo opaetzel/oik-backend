@@ -189,6 +189,30 @@ func InsertUnit(unit Unit) error {
 	return nil
 }
 
+func UpdateUnitAdmin(unit Unit) error {
+	stmt, err := db.Prepare("UPDATE units SET (unit_title, published, rotate_image_id) VALUES ($1, $2, $3);")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(unit.Title, unit.Published, unit.UnitImageID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpdateUnitUser(unit Unit) error {
+	stmt, err := db.Prepare("UPDATE units SET (unit_title, rotate_image_id) VALUES ($1, $2);")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(unit.Title, unit.UnitImageID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func InsertPage(page Page) error {
 	stmt, err := db.Prepare("INSERT INTO pages (page_title, unit_id) VALUES ($1, $2);")
 	if err != nil {

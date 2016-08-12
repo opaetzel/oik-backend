@@ -69,30 +69,73 @@ var PublishedUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	}
 })
 
-var UserPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var AdminUpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	user := context.Get(r, "user")
+	body, err := readBody(r)
+	if err != nil {
+		internalError(w, r, err)
+	}
+	var unit Unit
+	if err := json.Unmarshal(body, &unit); err != nil {
+		notParsable(w, r, err)
+		return
+	}
 	vars := mux.Vars(r)
-	userId, err := strconv.Atoi(vars["userId"])
+	unitId, err := strconv.Atoi(vars["unitId"])
 	if err != nil {
 		notParsable(w, r, err)
+		return
 	}
+	if unit.ID != unitId {
+		notParsable(w, r, err)
+		return
+	}
+	UpdateUnitAdmin(unit)
+})
+
+var UserUpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	body, err := readBody(r)
+	if err != nil {
+		internalError(w, r, err)
+	}
+	var unit Unit
+	if err := json.Unmarshal(body, &unit); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	vars := mux.Vars(r)
+	unitId, err := strconv.Atoi(vars["unitId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	if unit.ID != unitId {
+		notParsable(w, r, err)
+		return
+	}
+	if userOK, id, err := checkUserId(r); err != nil {
+		notParsable(w, r, err)
+		return
+	} else if userOK && id == unit.UserId {
+		UpdateUnitUser(unit)
+	} else {
+		unauthorized(w, r)
+	}
+})
+
+var UserPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	vars := mux.Vars(r)
 	pageId, err := strconv.Atoi(vars["pageId"])
 	if err != nil {
 		notParsable(w, r, err)
 	}
-	claims, ok := user.(*jwt.Token).Claims.(jwt.MapClaims)
-	if ok {
-		claimId, ok := claims["uid"].(int)
-		if !ok {
-			internalError(w, r, errors.New("could not cast uid to int"))
-			return
-		}
-		if claimId != userId {
-			unauthorized(w, r)
-			return
-		}
-		if page, err := GetUserPageById(userId, pageId); err != nil {
+	userOK, id, err := checkUserId(r)
+	if err != nil {
+		notParsable(w, r, err)
+	} else if userOK {
+		if page, err := GetUserPageById(id, pageId); err != nil {
 			internalError(w, r, err)
 		} else {
 			w.WriteHeader(http.StatusOK)
@@ -102,7 +145,7 @@ var UserPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 		}
 
 	} else {
-		internalError(w, r, errors.New("could not read claims"))
+		unauthorized(w, r)
 		return
 	}
 })
