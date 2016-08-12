@@ -176,7 +176,7 @@ var UnitCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		notParsable(w, r, err)
 		return
 	} else {
-
+		InsertUnit(unit)
 	}
 })
 
