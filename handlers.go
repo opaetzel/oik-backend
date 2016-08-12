@@ -5,8 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -38,11 +36,8 @@ var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	if pageId, err := strconv.Atoi(vars["pageId"]); err != nil {
-		w.WriteHeader(422)
-		apiErr := jsonErr{Code: http.StatusBadRequest, Message: "Could not parse pageId"}
-		if err := json.NewEncoder(w).Encode(apiErr); err != nil {
-			panic(err)
-		}
+		notParsable(w, r, err)
+		return
 	} else {
 		if page, err := GetPageById(pageId); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -64,22 +59,14 @@ var PageCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	var page Page
 	//Set limit to 4MB, maybe make configurable later
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 4194304))
+	body, err := readBody(r)
 	if err != nil {
 		internalError(w, r, err)
 		return
 	}
-	if err := r.Body.Close(); err != nil {
-		internalError(w, r, err)
-		return
-	}
 	if err := json.Unmarshal(body, &page); err != nil {
-		w.WriteHeader(422)
-		log.Println(err)
-		apiErr := jsonErr{Code: 422, Message: "Error parsing input. See log for details."}
-		if err := json.NewEncoder(w).Encode(apiErr); err != nil {
-			panic(err)
-		}
+		notParsable(w, r, err)
+		return
 	}
 	if err := InsertPage(page); err != nil {
 		apiErr := jsonErr{Code: http.StatusInternalServerError, Message: "Error inserting to DB"}
@@ -102,23 +89,15 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 	}
 	fmt.Println("bla")
 	var login LoginStruct
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 4194304))
+	body, err := readBody(r)
 	if err != nil {
-		internalError(w, r, err)
-		return
-	}
-	if err := r.Body.Close(); err != nil {
 		internalError(w, r, err)
 		return
 	}
 	fmt.Println("try to unmarshal")
 	if err := json.Unmarshal(body, &login); err != nil {
-		w.WriteHeader(422)
-		log.Println(err)
-		apiErr := jsonErr{Code: 422, Message: "Error parsing input. See log for details."}
-		if err := json.NewEncoder(w).Encode(apiErr); err != nil {
-			panic(err)
-		}
+		notParsable(w, r, err)
+		return
 	} else {
 		fmt.Println("unmarshal success")
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -164,22 +143,14 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 
 var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	var login LoginStruct
-	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 4194304))
+	body, err := readBody(r)
 	if err != nil {
 		internalError(w, r, err)
 		return
 	}
-	if err := r.Body.Close(); err != nil {
-		internalError(w, r, err)
-		return
-	}
 	if err := json.Unmarshal(body, &login); err != nil {
-		w.WriteHeader(422)
-		log.Println(err)
-		apiErr := jsonErr{Code: 422, Message: "Error parsing input. See log for details."}
-		if err := json.NewEncoder(w).Encode(apiErr); err != nil {
-			panic(err)
-		}
+		notParsable(w, r, err)
+		return
 	}
 	salt, pwhash, err := HashNewPW(login.Password)
 	if err != nil {
@@ -195,7 +166,18 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 })
 
 var UnitCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	//TODO
+	var unit Unit
+	body, err := readBody(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if err := json.Unmarshal(body, &unit); err != nil {
+		notParsable(w, r, err)
+		return
+	} else {
+
+	}
 })
 
 var UserUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
