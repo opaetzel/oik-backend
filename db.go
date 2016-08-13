@@ -128,6 +128,48 @@ func GetPublishedUnits() ([]Unit, error) {
 	return parseUnits(rows)
 }
 
+func GetPageOwner(pageId int) (int, error) {
+	query := `
+		SELECT units.user_id FROM units
+		JOIN pages ON pages.unit_id = units.unit_id
+		WHERE pages.page_id = $1;
+		`
+	row := db.QueryRow(query, pageId)
+	var userId int
+	err := row.Scan(&userId)
+	if err != nil {
+		return -1, err
+	}
+	return userId, nil
+}
+
+func UpdatePage(page Page) error {
+	stmt, err := db.Prepare("UPDATE pages SET (page_title) VALUES ($1);")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(page.Title)
+	if err != nil {
+		return err
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, err = tx.Prepare("UPDATE rows SET (left_markdown, left_html, right_markdown, right_html) VALUES ($1, $2, $3, $4);")
+	for _, row := range page.Rows {
+		_, err := stmt.Exec(row.LeftMarkdown, row.LeftHtml, row.RightMarkdown, row.RightHtml)
+		if err != nil {
+			return err
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func parsePage(row *sql.Row) (Page, error) {
 	var pageTitle, jsonRows string
 	var pageId, unitId int

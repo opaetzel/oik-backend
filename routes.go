@@ -52,6 +52,12 @@ var authRoutes = Routes{
 		PageCreate,
 	},
 	Route{
+		"PageUpdate",
+		"PUT",
+		"/pages/{pageId}",
+		UserUpdatePage,
+	},
+	Route{
 		"UserUnits",
 		"GET",
 		"/{userId}/units",

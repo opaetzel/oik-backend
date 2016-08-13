@@ -206,6 +206,50 @@ var PageCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}
 })
 
+var UserUpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	vars := mux.Vars(r)
+	pageId, err := strconv.Atoi(vars["pageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	dbUserId, err := GetPageOwner(pageId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	userOK, id, err := checkUserId(r)
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	} else if userOK {
+		if dbUserId != id {
+			unauthorized(w, r)
+			return
+		}
+		body, err := readBody(r)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		var page Page
+		err = json.Unmarshal(body, &page)
+		if err != nil {
+			notParsable(w, r, err)
+			return
+		}
+		err = UpdatePage(page)
+		if err != nil {
+			internalError(w, r, err)
+		} else {
+			w.WriteHeader(http.StatusOK)
+		}
+	} else {
+		unauthorized(w, r)
+	}
+})
+
 var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	loginFailed := func() {
 		w.WriteHeader(http.StatusUnauthorized)
