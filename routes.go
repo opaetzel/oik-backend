@@ -36,38 +36,44 @@ var authRoutes = Routes{
 	Route{
 		"UnitCreate",
 		"POST",
-		"/units",
+		"/users/{userId}/units",
 		UnitCreate,
 	},
 	Route{
 		"UserUpdateUnit",
 		"PUT",
-		"/{userId}/units/{unitId}",
+		"/users/{userId}/units/{unitId}",
 		UserUpdateUnit,
 	},
 	Route{
 		"PageCreate",
 		"POST",
-		"/pages",
+		"/users/{userId}/units/{unitId}/pages",
 		PageCreate,
 	},
 	Route{
 		"PageUpdate",
 		"PUT",
-		"/pages/{pageId}",
+		"/users/{userId}/units/{unitId}/pages/{pageId}",
 		UserUpdatePage,
 	},
 	Route{
 		"UserUnits",
 		"GET",
-		"/{userId}/units",
+		"/users/{userId}/units",
 		UserUnits,
 	},
 	Route{
 		"UserPageById",
 		"GET",
-		"/{userId}/pages/{pageId}",
+		"/users/{userId}/units/{unitId}/pages/{pageId}",
 		UserPageById,
+	},
+	Route{
+		"UploadImage",
+		"POST",
+		"/users/{userId}/units/{unitId}/images",
+		UploadImage,
 	},
 }
 
