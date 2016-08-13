@@ -70,8 +70,14 @@ var authRoutes = Routes{
 		UserPageById,
 	},
 	Route{
-		"UploadImage",
+		"CreateImage",
 		"POST",
+		"/users/{userId}/units/{unitId}/images",
+		CreateImage,
+	},
+	Route{
+		"UploadImage",
+		"PUT",
 		"/users/{userId}/units/{unitId}/images",
 		UploadImage,
 	},

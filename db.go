@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS images (
 	path varchar(255),
 	caption text,
 	credits text,
+	unit_id integer,
 	image_id SERIAL PRIMARY KEY
 );
 
@@ -253,6 +254,37 @@ func UpdateUnitUser(unit Unit) error {
 		return err
 	}
 	return nil
+}
+
+func GetImageOwner(imageId int) (int, error) {
+	query := `
+		SELECT units.user_id FROM units
+		JOIN images ON images.unit_id = units.unit_id
+		WHERE images.image_id = $1;
+		`
+	row := db.QueryRow(query, imageId)
+	var userId int
+	err := row.Scan(&userId)
+	if err != nil {
+		return -1, err
+	}
+	return userId, nil
+}
+
+func InsertImage(image Image) (int, error) {
+	stmt, err := db.Prepare("INSERT INTO images (caption, credits, unit_id) VALUES ($1, $2, $3, $4);")
+	if err != nil {
+		return -1, err
+	}
+	res, err := stmt.Exec(image.Caption, image.Credits, image.UnitId)
+	if err != nil {
+		return -1, err
+	}
+	imageId, err := res.LastInsertId()
+	if err != nil {
+		return -1, err
+	}
+	return int(imageId), nil
 }
 
 func InsertPage(page Page) error {

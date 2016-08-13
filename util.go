@@ -82,3 +82,11 @@ func checkUserId(r *http.Request) (bool, int, error) {
 		return false, 0, errors.New("could not read claims")
 	}
 }
+
+func notAcceptable(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotAcceptable)
+	apiErr := jsonErr{Code: http.StatusNotAcceptable, Message: "Content-Type header not set or not acceptable"}
+	if err := json.NewEncoder(w).Encode(apiErr); err != nil {
+		panic(err)
+	}
+}

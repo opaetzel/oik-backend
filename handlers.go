@@ -6,8 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -351,7 +354,83 @@ var UnitCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		err := InsertUnit(unit)
 		if err != nil {
 			internalError(w, r, err)
+			return
 		}
+		w.WriteHeader(http.StatusCreated)
+	}
+})
+
+var CreateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var image Image
+	body, err := readBody(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if err := json.Unmarshal(body, &image); err != nil {
+		notParsable(w, r, err)
+		return
+	} else {
+		imageId, err := InsertImage(image)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		image.ID = imageId
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(image); err != nil {
+			panic(err)
+		}
+	}
+})
+
+var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ok, userId, err := checkUserId(r)
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	if !ok {
+		unauthorized(w, r)
+		return
+	}
+	vars := mux.Vars(r)
+	imageId, err := strconv.Atoi(vars["imageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	imageOwner, err := GetImageOwner(imageId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if imageOwner != userId {
+		unauthorized(w, r)
+		return
+	}
+	contentType := r.Header.Get("Content-Type")
+	if contentType == "" || (contentType != "image/jpeg" && contentType != "image/png") {
+		log.Println(contentType)
+		notAcceptable(w, r)
+		return
+	}
+	extension := ".jpg"
+	if contentType == "image/png" {
+		extension = ".png"
+	}
+	imagePath := filepath.Join(conf.ImageStorage, strconv.Itoa(imageOwner), strconv.Itoa(imageId)+extension)
+	outFile, err := os.Create(imagePath)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	defer outFile.Close()
+	_, err = io.Copy(outFile, r.Body)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	} else {
 		w.WriteHeader(http.StatusCreated)
 	}
 })

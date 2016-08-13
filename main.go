@@ -14,21 +14,23 @@ import (
 )
 
 type Config struct {
-	UseTLS     bool
-	HTTPPort   int
-	HTTPSPort  int
-	PemFile    string
-	KeyFile    string
-	DBName     string
-	DBUser     string
-	DBPassword string
+	UseTLS       bool
+	HTTPPort     int
+	HTTPSPort    int
+	PemFile      string
+	KeyFile      string
+	DBName       string
+	DBUser       string
+	DBPassword   string
+	ImageStorage string
 }
+
+var conf Config
 
 func main() {
 	tomlFile := flag.String("config", "config.toml", "configuration file")
 	flag.Parse()
 
-	var conf Config
 	if _, err := toml.DecodeFile(*tomlFile, &conf); err != nil {
 		fmt.Println("Error trying to read configuration in", *tomlFile)
 		fmt.Println(err)
