@@ -420,7 +420,9 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	if contentType == "image/png" {
 		extension = ".png"
 	}
-	imagePath := filepath.Join(conf.ImageStorage, strconv.Itoa(imageOwner), strconv.Itoa(imageId)+extension)
+	imageDir := filepath.Join(conf.ImageStorage, strconv.Itoa(imageOwner))
+	os.MkdirAll(imageDir, 0755)
+	imagePath := filepath.Join(imageDir, strconv.Itoa(imageId)+extension)
 	outFile, err := os.Create(imagePath)
 	if err != nil {
 		internalError(w, r, err)
