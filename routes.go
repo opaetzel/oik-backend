@@ -78,7 +78,7 @@ var authRoutes = Routes{
 	Route{
 		"UploadImage",
 		"PUT",
-		"/users/{userId}/units/{unitId}/images",
+		"/users/{userId}/units/{unitId}/images/{imageId}",
 		UploadImage,
 	},
 }

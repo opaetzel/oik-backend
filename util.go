@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"reflect"
 	"strconv"
 
 	"github.com/dgrijalva/jwt-go"
@@ -69,10 +70,12 @@ func checkUserId(r *http.Request) (bool, int, error) {
 	user := context.Get(r, "user")
 	claims, ok := user.(*jwt.Token).Claims.(jwt.MapClaims)
 	if ok {
-		claimId, ok := claims["uid"].(int)
+		claimIdF, ok := claims["uid"].(float64)
 		if !ok {
+			log.Println(reflect.TypeOf(claims["uid"]))
 			return false, 0, errors.New("could not cast uid to int")
 		}
+		claimId := int(claimIdF)
 		if claimId != userId {
 			return false, 0, nil
 		} else {

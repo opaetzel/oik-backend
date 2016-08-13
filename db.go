@@ -272,15 +272,9 @@ func GetImageOwner(imageId int) (int, error) {
 }
 
 func InsertImage(image Image) (int, error) {
-	stmt, err := db.Prepare("INSERT INTO images (caption, credits, unit_id) VALUES ($1, $2, $3, $4);")
-	if err != nil {
-		return -1, err
-	}
-	res, err := stmt.Exec(image.Caption, image.Credits, image.UnitId)
-	if err != nil {
-		return -1, err
-	}
-	imageId, err := res.LastInsertId()
+	query := "INSERT INTO images (caption, credits, unit_id) VALUES ($1, $2, $3) RETURNING image_id;"
+	var imageId int
+	err := db.QueryRow(query, image.Caption, image.Credits, image.UnitId).Scan(&imageId)
 	if err != nil {
 		return -1, err
 	}
@@ -288,15 +282,9 @@ func InsertImage(image Image) (int, error) {
 }
 
 func InsertPage(page Page) error {
-	stmt, err := db.Prepare("INSERT INTO pages (page_title, unit_id) VALUES ($1, $2);")
-	if err != nil {
-		return err
-	}
-	res, err := stmt.Exec(page.Title, page.UnitID)
-	if err != nil {
-		return err
-	}
-	pageId, err := res.LastInsertId()
+	query := "INSERT INTO pages (page_title, unit_id) VALUES ($1, $2) RETURNING page_id;"
+	var pageId int
+	err := db.QueryRow(query, page.Title, page.UnitID).Scan(&pageId)
 	if err != nil {
 		return err
 	}
@@ -304,7 +292,7 @@ func InsertPage(page Page) error {
 	if err != nil {
 		return err
 	}
-	stmt, err = tx.Prepare("INSERT INTO rows (left_markdown, left_html, right_markdown, right_html, page_id) VALUES ($1, $2, $3, $4, $5);")
+	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, left_html, right_markdown, right_html, page_id) VALUES ($1, $2, $3, $4, $5);")
 	for _, row := range page.Rows {
 		_, err := stmt.Exec(row.LeftMarkdown, row.LeftHtml, row.RightMarkdown, row.RightHtml, pageId)
 		if err != nil {

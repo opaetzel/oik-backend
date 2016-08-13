@@ -400,6 +400,7 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		notParsable(w, r, err)
 		return
 	}
+	log.Println("try to get image owner for image", imageId)
 	imageOwner, err := GetImageOwner(imageId)
 	if err != nil {
 		internalError(w, r, err)
