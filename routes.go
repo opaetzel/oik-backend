@@ -97,6 +97,12 @@ var publicRoutes = Routes{
 		PageById,
 	},
 	Route{
+		"LoginOptions",
+		"OPTIONS",
+		"/login",
+		LoginOptionsHandler,
+	},
+	Route{
 		"Login",
 		"POST",
 		"/login",

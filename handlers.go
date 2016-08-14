@@ -253,6 +253,13 @@ var UserUpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	}
 })
 
+var LoginOptionsHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Acces-Control-Allow-Headers", "content-type")
+	w.Header().Set("Acces-Control-Allow-Methods", "POST")
+	//w.Header().Set("Acces-Control-Allow-Origin", "*")
+})
+
 var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	loginFailed := func() {
 		w.WriteHeader(http.StatusUnauthorized)
