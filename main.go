@@ -23,12 +23,13 @@ type Config struct {
 	DBUser       string
 	DBPassword   string
 	ImageStorage string
+	StaticFolder string
 }
 
 var conf Config
 
 func main() {
-	tomlFile := flag.String("config", "config.toml", "configuration file")
+	tomlFile := flag.String("config", "dev_config.toml", "configuration file")
 	flag.Parse()
 
 	if _, err := toml.DecodeFile(*tomlFile, &conf); err != nil {

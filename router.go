@@ -36,7 +36,7 @@ func NewRouter() *mux.Router {
 		handler = jwtMiddleware.Handler(NewRequireRole(route.Handler, "admin"))
 		registerRoute(api, route, handler)
 	}
-	fs := http.Dir("static/")
+	fs := http.Dir(conf.StaticFolder)
 	fileHandler := http.FileServer(fs)
 	router.PathPrefix("/assets/").Handler(fileHandler)
 	router.Path("/crossdomain.xml").Handler(fileHandler)
