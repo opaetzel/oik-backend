@@ -25,7 +25,7 @@ var AllUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r, err)
 	} else {
 		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(units); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"units": units}); err != nil {
 			panic(err)
 		}
 	}
@@ -54,7 +54,7 @@ var UserUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r, err)
 	} else {
 		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(units); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"units": units}); err != nil {
 			panic(err)
 		}
 	}
@@ -66,7 +66,7 @@ var PublishedUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		internalError(w, r, err)
 	} else {
 		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(units); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"units": units}); err != nil {
 			panic(err)
 		}
 	}
@@ -142,7 +142,7 @@ var UserPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 			internalError(w, r, err)
 		} else {
 			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(page); err != nil {
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{"page": page}); err != nil {
 				panic(err)
 			}
 		}
@@ -164,7 +164,7 @@ var AdminPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 			internalError(w, r, err)
 		} else {
 			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(page); err != nil {
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{"page": page}); err != nil {
 				panic(err)
 			}
 		}
@@ -182,7 +182,7 @@ var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			internalError(w, r, err)
 		} else {
 			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(page); err != nil {
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{"page": page}); err != nil {
 				panic(err)
 			}
 		}
@@ -264,7 +264,7 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 	loginFailed := func() {
 		w.WriteHeader(http.StatusUnauthorized)
 		apiErr := jsonErr{Code: http.StatusUnauthorized, Message: "Wrong username or password"}
-		if err := json.NewEncoder(w).Encode(apiErr); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"error": apiErr}); err != nil {
 			panic(err)
 		}
 	}
@@ -385,7 +385,7 @@ var CreateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		}
 		image.ID = imageId
 		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(image); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"image": image}); err != nil {
 			panic(err)
 		}
 	}
