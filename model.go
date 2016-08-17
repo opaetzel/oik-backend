@@ -35,10 +35,10 @@ type Page struct {
 
 type Unit struct {
 	Title       string `json:"title" db:"title"`
-	UnitImageID int    `json:"rotate_image_id" db:"rotate_image_id"`
-	PageIds     []int  `json:"pageids" db:"pageids"`
+	UnitImageID int    `json:"rotateImageId" db:"rotate_image_id"`
+	PageIds     []int  `json:"pageIds" db:"pageids"`
 	Published   bool   `json:"published" db:"published"`
-	UserId      int    `json:"userid" db:"userid"`
+	UserId      int    `json:"userId" db:"userid"`
 	ID          int    `json:"id" db:"id"`
 }
 
