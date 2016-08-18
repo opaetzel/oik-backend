@@ -256,6 +256,34 @@ func UpdateUnitUser(unit Unit) error {
 	return nil
 }
 
+func UpdateImagePath(imageId int, imagePath string) error {
+	stmt, err := db.Prepare("UPDATE images SET path=$1 WHERE image_id=$2")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(imagePath, imageId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetRotateImagePublishedAndPath(imageId int) (bool, string, error) {
+	query := `
+		SELECT units.published, rotate_images.basepath FROM units
+		JOIN rotate_images ON rotate_images.rotate_image_id = units.rotate_image_id
+		WHERE rotate_images.rotate_image_id = $1;
+		`
+	row := db.QueryRow(query, imageId)
+	var published bool
+	var path string
+	err := row.Scan(&published, &path)
+	if err != nil {
+		return false, "", err
+	}
+	return published, path, nil
+}
+
 func GetImageOwner(imageId int) (int, error) {
 	query := `
 		SELECT units.user_id FROM units
@@ -269,6 +297,22 @@ func GetImageOwner(imageId int) (int, error) {
 		return -1, err
 	}
 	return userId, nil
+}
+
+func GetImagePublishedAndPath(imageId int) (bool, string, error) {
+	query := `
+		SELECT units.published, images.path FROM units
+		JOIN images ON images.unit_id = units.unit_id
+		WHERE images.image_id = $1;
+		`
+	row := db.QueryRow(query, imageId)
+	var published bool
+	var path string
+	err := row.Scan(&published, &path)
+	if err != nil {
+		return false, "", err
+	}
+	return published, path, nil
 }
 
 func InsertImage(image Image) (int, error) {

@@ -441,6 +441,54 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		internalError(w, r, err)
 		return
 	} else {
+		err := UpdateImagePath(imageId, imagePath)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
 		w.WriteHeader(http.StatusCreated)
 	}
+})
+
+var RotateImageByIdAndNumber = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	imageId, err := strconv.Atoi(vars["imageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	number, err := strconv.Atoi(vars["number"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	published, imageFolder, err := GetRotateImagePublishedAndPath(imageId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if !published {
+		unauthorized(w, r)
+		return
+	}
+	sendRotateImage(w, r, imageFolder, number)
+})
+
+var ImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	imageId, err := strconv.Atoi(vars["imageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	published, imagePath, err := GetImagePublishedAndPath(imageId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if !published {
+		unauthorized(w, r)
+		return
+	}
+	sendImage(w, r, imagePath)
 })

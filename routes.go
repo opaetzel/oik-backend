@@ -97,6 +97,18 @@ var publicRoutes = Routes{
 		PageById,
 	},
 	Route{
+		"ImageById",
+		"GET",
+		"/get-image/{imageId}",
+		ImageById,
+	},
+	Route{
+		"RotateImageByIdAndNumber",
+		"GET",
+		"/get-rotate-image/{imageId}/{number}",
+		RotateImageByIdAndNumber,
+	},
+	Route{
 		"LoginOptions",
 		"OPTIONS",
 		"/login",
