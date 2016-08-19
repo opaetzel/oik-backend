@@ -108,6 +108,32 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 	return units, nil
 }
 
+func parseUnit(row *sql.Row) (Unit, error) {
+	var unit_title string
+	var published bool
+	var rotate_image_id int
+	var user_id int
+	var color_scheme int
+	var unit_id int
+	var pages_arr string
+
+	err := row.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr)
+	if err != nil {
+		return Unit{}, err
+	}
+	var pages []int
+	err = json.Unmarshal([]byte(pages_arr), &pages)
+	if err != nil {
+		return Unit{}, err
+	}
+	return Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, unit_id}, nil
+}
+
+func GetPublicUnit(unitId int) (Unit, error) {
+	row := db.QueryRow("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id WHERE units.unit_id=$1 GROUP BY units.unit_id;", unitId)
+	return parseUnit(row)
+}
+
 func GetAllUnits() ([]Unit, error) {
 	rows, err := db.Query("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id GROUP BY units.unit_id;")
 	if err != nil {

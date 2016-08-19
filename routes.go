@@ -91,6 +91,12 @@ var publicRoutes = Routes{
 		PublishedUnits,
 	},
 	Route{
+		"UnitById",
+		"GET",
+		"/units/{unitId}",
+		UnitById,
+	},
+	Route{
 		"PageById",
 		"GET",
 		"/pages/{pageId}",

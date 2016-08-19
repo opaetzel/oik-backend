@@ -31,6 +31,25 @@ var AllUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}
 })
 
+var UnitById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	unitIdStr := mux.Vars(r)["unitId"]
+	unitId, err := strconv.Atoi(unitIdStr)
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	if unit, err := GetPublicUnit(unitId); err != nil {
+		internalError(w, r, err)
+		return
+	} else {
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"unit": unit}); err != nil {
+			panic(err)
+		}
+	}
+})
+
 var UserUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	userIdStr := mux.Vars(r)["userId"]
 	userId, err := strconv.Atoi(userIdStr)
@@ -301,7 +320,6 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 			internalError(w, r, err)
 			return
 		}
-		log.Println(pwHashBytes, hash)
 		if bytes.Equal(pwHashBytes, hash) && user.Active {
 			token := jwt.New(jwt.SigningMethodHS256)
 			claims := make(jwt.MapClaims)
@@ -315,7 +333,9 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 
 			tokenString, _ := token.SignedString(mySigningKey)
 
-			w.Write([]byte(tokenString))
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{"token": tokenString}); err != nil {
+				internalError(w, r, err)
+			}
 		} else {
 			loginFailed()
 			return
