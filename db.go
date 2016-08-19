@@ -18,12 +18,14 @@ CREATE TABLE IF NOT EXISTS units (
 	published boolean,
 	rotate_image_id integer,
 	user_id integer,
+	color_scheme integer,
 	unit_id SERIAL PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS pages (
 	page_title varchar(255),
 	unit_id integer,
+	page_type varchar(255),
 	page_id SERIAL PRIMARY KEY
 );
 
@@ -88,10 +90,11 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 		var published bool
 		var rotate_image_id int
 		var user_id int
+		var color_scheme int
 		var unit_id int
 		var pages_arr string
 
-		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &unit_id, &pages_arr)
+		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr)
 		if err != nil {
 			return nil, err
 		}
@@ -100,7 +103,7 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 		if err != nil {
 			return nil, err
 		}
-		units = append(units, Unit{unit_title, rotate_image_id, pages, published, user_id, unit_id})
+		units = append(units, Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, unit_id})
 	}
 	return units, nil
 }
@@ -172,21 +175,21 @@ func UpdatePage(page Page) error {
 }
 
 func parsePage(row *sql.Row) (Page, error) {
-	var pageTitle, jsonRows string
+	var pageTitle, page_type, jsonRows string
 	var pageId, unitId int
-	if err := row.Scan(&pageTitle, &pageId, &unitId, &jsonRows); err != nil {
+	if err := row.Scan(&pageTitle, &pageId, &unitId, &page_type, &jsonRows); err != nil {
 		return Page{}, err
 	}
 	var rows []Row
 	if err := json.Unmarshal([]byte(jsonRows), &rows); err != nil {
 		return Page{}, err
 	}
-	return Page{pageTitle, rows, unitId, pageId}, nil
+	return Page{pageTitle, rows, unitId, page_type, pageId}, nil
 }
 
 func GetPublicPageById(id int) (Page, error) {
 	query := `
-		SELECT pages.page_title, pages.page_id, pages.unit_id, json_agg(rows.*) AS rows FROM pages 
+		SELECT pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages 
 		LEFT JOIN rows ON rows.page_id = pages.page_id
 		RIGHT JOIN units ON units.unit_id = pages.unit_id
 		WHERE pages.page_id=$1 AND units.published = true
@@ -198,7 +201,7 @@ func GetPublicPageById(id int) (Page, error) {
 
 func GetPageById(id int) (Page, error) {
 	query := `
-		SELECT pages.page_title, pages.page_id, pages.unit_id, json_agg(rows.*) AS rows FROM pages 
+		SELECT pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages 
 		LEFT JOIN rows ON rows.page_id = pages.page_id
 		RIGHT JOIN units ON units.unit_id = pages.unit_id
 		WHERE pages.page_id=$1
@@ -210,7 +213,7 @@ func GetPageById(id int) (Page, error) {
 
 func GetUserPageById(pageId, userId int) (Page, error) {
 	query := `
-		SELECT pages.page_title, pages.page_id, pages.unit_id, json_agg(rows.*) AS rows FROM pages 
+		SELECT pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages 
 		LEFT JOIN rows ON rows.page_id = pages.page_id
 		RIGHT JOIN units ON units.unit_id = pages.unit_id
 		WHERE pages.page_id=$1 AND units.user_id = $2
@@ -221,11 +224,11 @@ func GetUserPageById(pageId, userId int) (Page, error) {
 }
 
 func InsertUnit(unit Unit) error {
-	stmt, err := db.Prepare("INSERT INTO units (unit_title, published, rotate_image_id, user_id) VALUES ($1, $2, $3, $4)")
+	stmt, err := db.Prepare("INSERT INTO units (unit_title, published, rotate_image_id, user_id, color_scheme) VALUES ($1, $2, $3, $4, $5)")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(unit.Title, unit.Published, unit.UnitImageID, unit.UserId)
+	_, err = stmt.Exec(unit.Title, unit.Published, unit.UnitImageID, unit.UserId, unit.ColorScheme)
 	if err != nil {
 		return err
 	}
@@ -233,11 +236,11 @@ func InsertUnit(unit Unit) error {
 }
 
 func UpdateUnitAdmin(unit Unit) error {
-	stmt, err := db.Prepare("UPDATE units SET (unit_title, published, rotate_image_id) VALUES ($1, $2, $3);")
+	stmt, err := db.Prepare("UPDATE units SET (unit_title, published, rotate_image_id, color_scheme) VALUES ($1, $2, $3, $4);")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(unit.Title, unit.Published, unit.UnitImageID)
+	_, err = stmt.Exec(unit.Title, unit.Published, unit.UnitImageID, unit.ColorScheme)
 	if err != nil {
 		return err
 	}
@@ -245,11 +248,11 @@ func UpdateUnitAdmin(unit Unit) error {
 }
 
 func UpdateUnitUser(unit Unit) error {
-	stmt, err := db.Prepare("UPDATE units SET (unit_title, rotate_image_id) VALUES ($1, $2);")
+	stmt, err := db.Prepare("UPDATE units SET (unit_title, rotate_image_id, color_scheme) VALUES ($1, $2, $3);")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(unit.Title, unit.UnitImageID)
+	_, err = stmt.Exec(unit.Title, unit.UnitImageID, unit.ColorScheme)
 	if err != nil {
 		return err
 	}
@@ -326,9 +329,9 @@ func InsertImage(image Image) (int, error) {
 }
 
 func InsertPage(page Page) error {
-	query := "INSERT INTO pages (page_title, unit_id) VALUES ($1, $2) RETURNING page_id;"
+	query := "INSERT INTO pages (page_title, page_type, unit_id) VALUES ($1, $2, $3) RETURNING page_id;"
 	var pageId int
-	err := db.QueryRow(query, page.Title, page.UnitID).Scan(&pageId)
+	err := db.QueryRow(query, page.Title, page.PageType, page.UnitID).Scan(&pageId)
 	if err != nil {
 		return err
 	}

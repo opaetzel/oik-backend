@@ -27,10 +27,11 @@ type Row struct {
 }
 
 type Page struct {
-	Title  string `json:"title" db:"title"`
-	Rows   []Row  `json:"rows" db:"rows"`
-	UnitID int    `json:"unit_id" db:"unit_id"`
-	ID     int    `json:"id" db:"id"`
+	Title    string `json:"title" db:"title"`
+	Rows     []Row  `json:"rows" db:"rows"`
+	UnitID   int    `json:"unit_id" db:"unit_id"`
+	PageType string `json:"page_type" db:"page_type"`
+	ID       int    `json:"id" db:"id"`
 }
 
 type Unit struct {
@@ -38,6 +39,7 @@ type Unit struct {
 	UnitImageID int    `json:"rotateImageId" db:"rotate_image_id"`
 	PageIds     []int  `json:"pageIds" db:"pageids"`
 	Published   bool   `json:"published" db:"published"`
+	ColorScheme int    `json:"color_scheme" db:"color_scheme"`
 	UserId      int    `json:"userId" db:"userid"`
 	ID          int    `json:"id" db:"id"`
 }
