@@ -234,7 +234,7 @@ func GetPageById(id int) (Page, error) {
 		LEFT JOIN rows ON rows.page_id = pages.page_id
 		RIGHT JOIN units ON units.unit_id = pages.unit_id
 		WHERE pages.page_id=$1
-		GROUP BY pages.page_id;
+		GROUP BY pages.page_id, units.unit_id;
 		`
 	row := db.QueryRow(query, id)
 	return parsePage(row)
