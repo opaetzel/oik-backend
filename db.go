@@ -230,7 +230,7 @@ func GetPublicPageById(id int) (Page, error) {
 */
 func GetPageById(id int) (Page, error) {
 	query := `
-		SELECT units.published, pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages 
+		SELECT units.published, units.user_id, pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages 
 		LEFT JOIN rows ON rows.page_id = pages.page_id
 		RIGHT JOIN units ON units.unit_id = pages.unit_id
 		WHERE pages.page_id=$1
@@ -389,7 +389,7 @@ func GetUserById(userId int) (User, error) {
 	if err := json.Unmarshal([]byte(jsonUnits), &units); err != nil {
 		return User{}, err
 	}
-	u := User{Username: dbUsername, Units: units, Groups: groups}
+	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId}
 	return u, nil
 }
 

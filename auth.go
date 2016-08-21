@@ -15,7 +15,7 @@ import (
 )
 
 type User struct {
-	Username string   `json:"username" db:"username"`
+	Username string   `json:"name" db:"username"`
 	Groups   []string `json:"groups" db:"groups"`
 	Units    []int    `json:"units" db:"units"`
 	ID       int      `json:"id" db:"user_id"`
