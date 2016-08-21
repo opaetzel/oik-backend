@@ -11,27 +11,6 @@ type Route struct {
 
 type Routes []Route
 
-var adminRoutes = Routes{
-	Route{
-		"AllUnits",
-		"GET",
-		"/allunits",
-		AllUnits,
-	},
-	Route{
-		"AdminPageById",
-		"GET",
-		"/admin-pages/{pageId}",
-		AdminPageById,
-	},
-	Route{
-		"AdminUpdateUnit",
-		"PATCH",
-		"/admin-units/{unitId}",
-		AdminUpdateUnit,
-	},
-}
-
 var authRoutes = Routes{
 	Route{
 		"UnitCreate",
@@ -56,18 +35,6 @@ var authRoutes = Routes{
 		"PATCH",
 		"/pages/{pageId}",
 		UserUpdatePage,
-	},
-	Route{
-		"UserUnits",
-		"GET",
-		"/user-units",
-		UserUnits,
-	},
-	Route{
-		"UserPageById",
-		"GET",
-		"/user-pages/{pageId}",
-		UserPageById,
 	},
 	Route{
 		"CreateImage",
@@ -101,6 +68,12 @@ var publicRoutes = Routes{
 		"GET",
 		"/pages/{pageId}",
 		PageById,
+	},
+	Route{
+		"UserById",
+		"GET",
+		"/users/{userId}",
+		UserById,
 	},
 	Route{
 		"ImageById",

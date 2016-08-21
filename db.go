@@ -129,7 +129,7 @@ func parseUnit(row *sql.Row) (Unit, error) {
 	return Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, unit_id}, nil
 }
 
-func GetPublicUnit(unitId int) (Unit, error) {
+func GetUnit(unitId int) (Unit, error) {
 	row := db.QueryRow("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id WHERE units.unit_id=$1 GROUP BY units.unit_id;", unitId)
 	return parseUnit(row)
 }
@@ -142,6 +142,7 @@ func GetAllUnits() ([]Unit, error) {
 	return parseUnits(rows)
 }
 
+/*
 func GetUserUnits(userId int) ([]Unit, error) {
 	rows, err := db.Query("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id WHERE units.user_id=$1 GROUP BY units.unit_id;", userId)
 	if err != nil {
@@ -149,7 +150,7 @@ func GetUserUnits(userId int) ([]Unit, error) {
 	}
 	return parseUnits(rows)
 }
-
+*/
 func GetPublishedUnits() ([]Unit, error) {
 	rows, err := db.Query("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id WHERE units.published=true GROUP BY units.unit_id;")
 	if err != nil {
@@ -201,21 +202,23 @@ func UpdatePage(page Page) error {
 }
 
 func parsePage(row *sql.Row) (Page, error) {
+	var published bool
 	var pageTitle, page_type, jsonRows string
-	var pageId, unitId int
-	if err := row.Scan(&pageTitle, &pageId, &unitId, &page_type, &jsonRows); err != nil {
+	var pageId, unitId, userId int
+	if err := row.Scan(&published, &userId, &pageTitle, &pageId, &unitId, &page_type, &jsonRows); err != nil {
 		return Page{}, err
 	}
 	var rows []Row
 	if err := json.Unmarshal([]byte(jsonRows), &rows); err != nil {
 		return Page{}, err
 	}
-	return Page{pageTitle, rows, unitId, page_type, pageId}, nil
+	return Page{pageTitle, rows, unitId, page_type, pageId, userId, published}, nil
 }
 
+/*
 func GetPublicPageById(id int) (Page, error) {
 	query := `
-		SELECT pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages 
+		SELECT pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages
 		LEFT JOIN rows ON rows.page_id = pages.page_id
 		RIGHT JOIN units ON units.unit_id = pages.unit_id
 		WHERE pages.page_id=$1 AND units.published = true
@@ -224,10 +227,10 @@ func GetPublicPageById(id int) (Page, error) {
 	row := db.QueryRow(query, id)
 	return parsePage(row)
 }
-
+*/
 func GetPageById(id int) (Page, error) {
 	query := `
-		SELECT pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages 
+		SELECT units.published, pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages 
 		LEFT JOIN rows ON rows.page_id = pages.page_id
 		RIGHT JOIN units ON units.unit_id = pages.unit_id
 		WHERE pages.page_id=$1
@@ -237,9 +240,10 @@ func GetPageById(id int) (Page, error) {
 	return parsePage(row)
 }
 
+/*
 func GetUserPageById(pageId, userId int) (Page, error) {
 	query := `
-		SELECT pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages 
+		SELECT pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages
 		LEFT JOIN rows ON rows.page_id = pages.page_id
 		RIGHT JOIN units ON units.unit_id = pages.unit_id
 		WHERE pages.page_id=$1 AND units.user_id = $2
@@ -248,7 +252,7 @@ func GetUserPageById(pageId, userId int) (Page, error) {
 	row := db.QueryRow(query, pageId, userId)
 	return parsePage(row)
 }
-
+*/
 func InsertUnit(unit Unit) error {
 	stmt, err := db.Prepare("INSERT INTO units (unit_title, published, rotate_image_id, user_id, color_scheme) VALUES ($1, $2, $3, $4, $5)")
 	if err != nil {
@@ -313,35 +317,21 @@ func GetRotateImagePublishedAndPath(imageId int) (bool, string, error) {
 	return published, path, nil
 }
 
-func GetImageOwner(imageId int) (int, error) {
+func GetImageById(imageId int) (Image, error) {
 	query := `
-		SELECT units.user_id FROM units
-		JOIN images ON images.unit_id = units.unit_id
-		WHERE images.image_id = $1;
-		`
-	row := db.QueryRow(query, imageId)
-	var userId int
-	err := row.Scan(&userId)
-	if err != nil {
-		return -1, err
-	}
-	return userId, nil
-}
-
-func GetImagePublishedAndPath(imageId int) (bool, string, error) {
-	query := `
-		SELECT units.published, images.path FROM units
+		SELECT units.published, units.user_id, images.path, images.caption, images.credits, images.unit_id FROM units
 		JOIN images ON images.unit_id = units.unit_id
 		WHERE images.image_id = $1;
 		`
 	row := db.QueryRow(query, imageId)
 	var published bool
-	var path string
-	err := row.Scan(&published, &path)
+	var userId, unitId int
+	var path, caption, credits string
+	err := row.Scan(&published, &userId, &path, &caption, &credits, &unitId)
 	if err != nil {
-		return false, "", err
+		return Image{}, err
 	}
-	return published, path, nil
+	return Image{path, caption, credits, unitId, userId, imageId, published}, nil
 }
 
 func InsertImage(image Image) (int, error) {
@@ -379,7 +369,31 @@ func InsertPage(page Page) error {
 	return nil
 }
 
-func GetUser(username string) (User, error) {
+func GetUserById(userId int) (User, error) {
+	query := `SELECT users.username, json_agg(units.unit_id) AS units, json_agg(groups.group_name) FROM users 
+		LEFT JOIN units ON units.user_id=users.user_id 
+		LEFT JOIN user_groups ON users.user_id=user_groups.user_id 
+		LEFT JOIN groups ON user_groups.group_id = groups.group_id
+		WHERE users.user_id=$1 GROUP BY users.user_id`
+	row := db.QueryRow(query, userId)
+	var dbUsername, jsonUnits, jsonGroups string
+	err := row.Scan(&dbUsername, &jsonUnits, &jsonGroups)
+	if err != nil {
+		return User{}, err
+	}
+	var groups []string
+	if err := json.Unmarshal([]byte(jsonGroups), &groups); err != nil {
+		return User{}, err
+	}
+	var units []int
+	if err := json.Unmarshal([]byte(jsonUnits), &units); err != nil {
+		return User{}, err
+	}
+	u := User{Username: dbUsername, Units: units, Groups: groups}
+	return u, nil
+}
+
+func GetUserByName(username string) (User, error) {
 	row := db.QueryRow("SELECT users.*, json_agg(groups.group_name) FROM users LEFT JOIN user_groups ON users.user_id=user_groups.user_id LEFT JOIN groups ON user_groups.group_id=groups.group_id WHERE username=$1 GROUP BY users.user_id", username)
 	var dbUsername, salt, pwhash, jsonGroups string
 	var active bool
@@ -392,7 +406,7 @@ func GetUser(username string) (User, error) {
 	if err := json.Unmarshal([]byte(jsonGroups), &groups); err != nil {
 		return User{}, err
 	}
-	u := User{dbUsername, groups, salt, pwhash, active, id}
+	u := User{dbUsername, groups, nil, id, salt, pwhash, active}
 	return u, nil
 }
 
@@ -401,7 +415,7 @@ func InsertUser(user User) error {
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(user.Username, user.Salt, user.PWHash, user.Active)
+	_, err = stmt.Exec(user.Username, user.salt, user.pwHash, user.active)
 	if err != nil {
 		return err
 	}

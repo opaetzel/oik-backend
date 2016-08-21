@@ -3,11 +3,13 @@ package main
 import "encoding/json"
 
 type Image struct {
-	path    string
-	Caption string `json:"caption" db:"caption"`
-	Credits string `json:"credits" db:"credits"`
-	UnitId  int    `json:"unit_id" db:"unit_id"`
-	ID      int    `json:"id" db:"id"`
+	path      string
+	Caption   string `json:"caption" db:"caption"`
+	Credits   string `json:"credits" db:"credits"`
+	UnitId    int    `json:"unit_id" db:"unit_id"`
+	UserId    int    `json:"user_id" db:"user_id"`
+	ID        int    `json:"id" db:"id"`
+	published bool
 }
 
 type RotateImage struct {
@@ -27,17 +29,19 @@ type Row struct {
 }
 
 type Page struct {
-	Title    string `json:"title" db:"title"`
-	Rows     []Row  `json:"rows" db:"rows"`
-	UnitID   int    `json:"unit_id" db:"unit_id"`
-	PageType string `json:"page_type" db:"page_type"`
-	ID       int    `json:"id" db:"id"`
+	Title     string `json:"title" db:"title"`
+	Rows      []Row  `json:"rows" db:"rows"`
+	UnitID    int    `json:"unit_id" db:"unit_id"`
+	PageType  string `json:"page_type" db:"page_type"`
+	ID        int    `json:"id" db:"id"`
+	userId    int
+	published bool
 }
 
 type Unit struct {
 	Title       string `json:"title" db:"title"`
 	UnitImageID int    `json:"rotateImageId" db:"rotate_image_id"`
-	PageIds     []int  `json:"pageIds" db:"pageids"`
+	PageIds     []int  `json:"pages" db:"pageids"`
 	Published   bool   `json:"published" db:"published"`
 	ColorScheme int    `json:"color_scheme" db:"color_scheme"`
 	UserId      int    `json:"userId" db:"userid"`
@@ -115,7 +119,8 @@ func (r *Page) UnmarshalJSON(data []byte) error {
 func (r *Unit) UnmarshalJSON(data []byte) error {
 	type Alias Unit
 	aux := &struct {
-		MyID int `json:"unit_id"`
+		MyID    int   `json:"unit_id"`
+		MyPages []int `json:"pageIds"`
 		*Alias
 	}{
 		Alias: (*Alias)(r),
@@ -126,5 +131,6 @@ func (r *Unit) UnmarshalJSON(data []byte) error {
 	if r.ID == 0 {
 		r.ID = aux.MyID
 	}
+	r.PageIds = aux.MyPages
 	return nil
 }

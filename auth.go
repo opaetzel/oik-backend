@@ -17,10 +17,11 @@ import (
 type User struct {
 	Username string   `json:"username" db:"username"`
 	Groups   []string `json:"groups" db:"groups"`
-	Salt     string   `json:"salt" db:"salt"`
-	PWHash   string   `json:"pwhash" db:"pwhash"`
-	Active   bool     `json:"active" db:"active"`
+	Units    []int    `json:"units" db:"units"`
 	ID       int      `json:"id" db:"user_id"`
+	salt     string
+	pwHash   string
+	active   bool
 }
 
 type LoginStruct struct {
@@ -31,6 +32,10 @@ type LoginStruct struct {
 type RequireRole struct {
 	handler http.Handler
 	role    string
+}
+
+func (u User) isInGroup(group string) bool {
+	return stringInSlice(group, u.Groups)
 }
 
 func NewRequireRole(handler http.Handler, role string) *RequireRole {
@@ -87,11 +92,19 @@ func (rr *RequireRole) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 var mySigningKey = []byte("secret")
 
-var jwtMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
+var jwtRequiredMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
 	ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
 		return mySigningKey, nil
 	},
 	SigningMethod: jwt.SigningMethodHS256,
+})
+
+var jwtOptionalMiddleware = jwtmiddleware.New(jwtmiddleware.Options{
+	ValidationKeyGetter: func(token *jwt.Token) (interface{}, error) {
+		return mySigningKey, nil
+	},
+	CredentialsOptional: true,
+	SigningMethod:       jwt.SigningMethodHS256,
 })
 
 func HashPWWithSalt(pw, saltBytes []byte) ([]byte, error) {

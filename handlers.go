@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -15,10 +14,10 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/context"
 	"github.com/gorilla/mux"
 )
 
+/*
 var AllUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	if units, err := GetAllUnits(); err != nil {
@@ -30,7 +29,7 @@ var AllUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 })
-
+*/
 var UnitById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	unitIdStr := mux.Vars(r)["unitId"]
@@ -39,10 +38,22 @@ var UnitById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		notParsable(w, r, err)
 		return
 	}
-	if unit, err := GetPublicUnit(unitId); err != nil {
+	if unit, err := GetUnit(unitId); err != nil {
 		internalError(w, r, err)
 		return
 	} else {
+		if !unit.Published {
+			user, err := getUserFromRequest(r)
+			if err != nil {
+				log.Println(err)
+				unauthorized(w, r)
+				return
+			}
+			if user.ID != unit.UserId && !user.isInGroup("admin") {
+				unauthorized(w, r)
+				return
+			}
+		}
 		w.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(w).Encode(map[string]interface{}{"unit": unit}); err != nil {
 			panic(err)
@@ -50,30 +61,18 @@ var UnitById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}
 })
 
-var UserUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	userIdStr := mux.Vars(r)["userId"]
-	userId, err := strconv.Atoi(userIdStr)
-	if err != nil {
+var UserById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	if userId, err := strconv.Atoi(mux.Vars(r)["userId"]); err != nil {
 		notParsable(w, r, err)
 		return
-	}
-	user := context.Get(r, "user")
-	claims, ok := user.(*jwt.Token).Claims.(jwt.MapClaims)
-	claimUserId, ok := claims["uid"].(int)
-	if !ok {
-		internalError(w, r, errors.New("claimUserId not string"))
-		return
-	}
-	if claimUserId != userId {
-		unauthorized(w, r)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	if units, err := GetUserUnits(userId); err != nil {
-		internalError(w, r, err)
 	} else {
-		w.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{"units": units}); err != nil {
+		user, err := GetUserById(userId)
+		if err != nil {
+			notFound(w, r)
+			return
+		}
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"user": user}); err != nil {
 			panic(err)
 		}
 	}
@@ -89,30 +88,6 @@ var PublishedUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 			panic(err)
 		}
 	}
-})
-
-var AdminUpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	body, err := readBody(r)
-	if err != nil {
-		internalError(w, r, err)
-	}
-	var unit Unit
-	if err := json.Unmarshal(body, &unit); err != nil {
-		notParsable(w, r, err)
-		return
-	}
-	vars := mux.Vars(r)
-	unitId, err := strconv.Atoi(vars["unitId"])
-	if err != nil {
-		notParsable(w, r, err)
-		return
-	}
-	if unit.ID != unitId {
-		notParsable(w, r, err)
-		return
-	}
-	UpdateUnitAdmin(unit)
 })
 
 var UserUpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -146,29 +121,7 @@ var UserUpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	}
 })
 
-var UserPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	vars := mux.Vars(r)
-	pageId, err := strconv.Atoi(vars["pageId"])
-	if err != nil {
-		notParsable(w, r, err)
-	}
-	id, err := getUserId(r)
-	if err != nil {
-		notParsable(w, r, err)
-	} else {
-		if page, err := GetUserPageById(id, pageId); err != nil {
-			internalError(w, r, err)
-		} else {
-			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(map[string]interface{}{"page": page}); err != nil {
-				panic(err)
-			}
-		}
-	}
-})
-
-var AdminPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	if pageId, err := strconv.Atoi(vars["pageId"]); err != nil {
@@ -178,24 +131,18 @@ var AdminPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 		if page, err := GetPageById(pageId); err != nil {
 			internalError(w, r, err)
 		} else {
-			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(map[string]interface{}{"page": page}); err != nil {
-				panic(err)
+			if !page.published {
+				user, err := getUserFromRequest(r)
+				if err != nil {
+					log.Println(err)
+					unauthorized(w, r)
+					return
+				}
+				if user.ID != page.userId && !user.isInGroup("admin") {
+					unauthorized(w, r)
+					return
+				}
 			}
-		}
-	}
-})
-
-var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	if pageId, err := strconv.Atoi(vars["pageId"]); err != nil {
-		notParsable(w, r, err)
-		return
-	} else {
-		if page, err := GetPublicPageById(pageId); err != nil {
-			internalError(w, r, err)
-		} else {
 			w.WriteHeader(http.StatusOK)
 			if err := json.NewEncoder(w).Encode(map[string]interface{}{"page": page}); err != nil {
 				panic(err)
@@ -295,7 +242,7 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 	} else {
 		fmt.Println("unmarshal success")
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		user, err := GetUser(login.Username)
+		user, err := GetUserByName(login.Username)
 		if err != nil {
 			fmt.Println("did not get user")
 			fmt.Println(err)
@@ -303,18 +250,18 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		fmt.Println("got user")
-		hash, err := HashPWWithSaltB64(login.Password, user.Salt)
+		hash, err := HashPWWithSaltB64(login.Password, user.salt)
 		if err != nil {
 			loginFailed()
 			return
 		}
 		log.Println("hashed pw")
-		pwHashBytes, err := base64.StdEncoding.DecodeString(user.PWHash)
+		pwHashBytes, err := base64.StdEncoding.DecodeString(user.pwHash)
 		if err != nil {
 			internalError(w, r, err)
 			return
 		}
-		if bytes.Equal(pwHashBytes, hash) && user.Active {
+		if bytes.Equal(pwHashBytes, hash) && user.active {
 			token := jwt.New(jwt.SigningMethodHS256)
 			claims := make(jwt.MapClaims)
 
@@ -354,7 +301,7 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	b64hash := base64.StdEncoding.EncodeToString(pwhash)
-	user := User{login.Username, []string{"student"}, salt, b64hash, false, 0}
+	user := User{login.Username, []string{"student"}, nil, 0, salt, b64hash, false}
 	if err := InsertUser(user); err != nil {
 		internalError(w, r, err)
 		return
@@ -418,12 +365,12 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	log.Println("try to get image owner for image", imageId)
-	imageOwner, err := GetImageOwner(imageId)
+	image, err := GetImageById(imageId)
 	if err != nil {
 		internalError(w, r, err)
 		return
 	}
-	if imageOwner != userId {
+	if image.UserId != userId {
 		unauthorized(w, r)
 		return
 	}
@@ -437,9 +384,9 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	if contentType == "image/png" {
 		extension = ".png"
 	}
-	imageDir := filepath.Join(conf.ImageStorage, strconv.Itoa(imageOwner))
+	imageDir := filepath.Join(conf.ImageStorage, strconv.Itoa(image.UserId))
 	os.MkdirAll(imageDir, 0755)
-	imagePath := filepath.Join(imageDir, strconv.Itoa(imageId)+extension)
+	imagePath := filepath.Join(imageDir, strconv.Itoa(image.ID)+extension)
 	outFile, err := os.Create(imagePath)
 	if err != nil {
 		internalError(w, r, err)
@@ -491,14 +438,23 @@ var ImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		notParsable(w, r, err)
 		return
 	}
-	published, imagePath, err := GetImagePublishedAndPath(imageId)
+	image, err := GetImageById(imageId)
 	if err != nil {
 		internalError(w, r, err)
 		return
 	}
-	if !published {
-		unauthorized(w, r)
-		return
+	//TODO: In frontend: send xhr with token on un-published images
+	if !image.published {
+		user, err := getUserFromRequest(r)
+		if err != nil {
+			log.Println(err)
+			unauthorized(w, r)
+			return
+		}
+		if user.ID != image.UserId && !stringInSlice("admin", user.Groups) {
+			unauthorized(w, r)
+			return
+		}
 	}
-	sendImage(w, r, imagePath)
+	sendImage(w, r, image.path)
 })
