@@ -136,10 +136,10 @@ var UserUpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		notParsable(w, r, err)
 		return
 	}
-	if userOK, id, err := checkUserId(r); err != nil {
+	if id, err := getUserId(r); err != nil {
 		notParsable(w, r, err)
 		return
-	} else if userOK && id == unit.UserId {
+	} else if id == unit.UserId {
 		UpdateUnitUser(unit)
 	} else {
 		unauthorized(w, r)
@@ -153,10 +153,10 @@ var UserPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		notParsable(w, r, err)
 	}
-	userOK, id, err := checkUserId(r)
+	id, err := getUserId(r)
 	if err != nil {
 		notParsable(w, r, err)
-	} else if userOK {
+	} else {
 		if page, err := GetUserPageById(id, pageId); err != nil {
 			internalError(w, r, err)
 		} else {
@@ -165,10 +165,6 @@ var UserPageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 				panic(err)
 			}
 		}
-
-	} else {
-		unauthorized(w, r)
-		return
 	}
 })
 
@@ -241,11 +237,11 @@ var UserUpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		internalError(w, r, err)
 		return
 	}
-	userOK, id, err := checkUserId(r)
+	id, err := getUserId(r)
 	if err != nil {
 		notParsable(w, r, err)
 		return
-	} else if userOK {
+	} else {
 		if dbUserId != id {
 			unauthorized(w, r)
 			return
@@ -267,8 +263,6 @@ var UserUpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		} else {
 			w.WriteHeader(http.StatusOK)
 		}
-	} else {
-		unauthorized(w, r)
 	}
 })
 
@@ -412,13 +406,9 @@ var CreateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 })
 
 var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	ok, userId, err := checkUserId(r)
+	userId, err := getUserId(r)
 	if err != nil {
 		notParsable(w, r, err)
-		return
-	}
-	if !ok {
-		unauthorized(w, r)
 		return
 	}
 	vars := mux.Vars(r)

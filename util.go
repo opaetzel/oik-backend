@@ -9,11 +9,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
-	"github.com/gorilla/mux"
 )
 
 func stringInSlice(a string, list []string) bool {
@@ -70,27 +68,18 @@ func readBody(r *http.Request) ([]byte, error) {
 	return body, nil
 }
 
-func checkUserId(r *http.Request) (bool, int, error) {
-	vars := mux.Vars(r)
-	userId, err := strconv.Atoi(vars["userId"])
-	if err != nil {
-		return false, 0, err
-	}
+func getUserId(r *http.Request) (int, error) {
 	user := context.Get(r, "user")
 	claims, ok := user.(*jwt.Token).Claims.(jwt.MapClaims)
 	if ok {
 		claimIdF, ok := claims["uid"].(float64)
 		if !ok {
-			return false, 0, errors.New("could not cast uid to int")
+			return 0, errors.New("could not cast uid to int")
 		}
 		claimId := int(claimIdF)
-		if claimId != userId {
-			return false, 0, nil
-		} else {
-			return true, userId, nil
-		}
+		return claimId, nil
 	} else {
-		return false, 0, errors.New("could not read claims")
+		return 0, errors.New("could not read claims")
 	}
 }
 
