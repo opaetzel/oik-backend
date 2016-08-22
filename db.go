@@ -31,9 +31,7 @@ CREATE TABLE IF NOT EXISTS pages (
 
 CREATE TABLE IF NOT EXISTS rows (
 	left_markdown text,
-	left_html text,
 	right_markdown text,
-	right_html text,
 	page_id integer,
 	row_id SERIAL PRIMARY KEY
 );
@@ -187,9 +185,9 @@ func UpdatePage(page Page) error {
 	if err != nil {
 		return err
 	}
-	stmt, err = tx.Prepare("UPDATE rows SET (left_markdown, left_html, right_markdown, right_html) VALUES ($1, $2, $3, $4);")
+	stmt, err = tx.Prepare("UPDATE rows SET (left_markdown, right_markdown) VALUES ($1, $2);")
 	for _, row := range page.Rows {
-		_, err := stmt.Exec(row.LeftMarkdown, row.LeftHtml, row.RightMarkdown, row.RightHtml)
+		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown)
 		if err != nil {
 			return err
 		}
@@ -355,9 +353,9 @@ func InsertPage(page Page) error {
 	if err != nil {
 		return err
 	}
-	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, left_html, right_markdown, right_html, page_id) VALUES ($1, $2, $3, $4, $5);")
+	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, right_markdown, page_id) VALUES ($1, $2, $3);")
 	for _, row := range page.Rows {
-		_, err := stmt.Exec(row.LeftMarkdown, row.LeftHtml, row.RightMarkdown, row.RightHtml, pageId)
+		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, pageId)
 		if err != nil {
 			return err
 		}
