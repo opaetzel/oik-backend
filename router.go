@@ -32,12 +32,15 @@ func NewRouter() *mux.Router {
 	}
 	fs := http.Dir(conf.StaticFolder)
 	fileHandler := http.FileServer(fs)
-	router.PathPrefix("/assets/").Handler(fileHandler)
-	router.PathPrefix("/images/").Handler(fileHandler)
-	router.Path("/crossdomain.xml").Handler(fileHandler)
-	router.Path("/robots.txt").Handler(fileHandler)
-	router.NotFoundHandler = http.HandlerFunc(notFound)
-
+	router.PathPrefix("/app/").Handler(http.HandlerFunc(notFound))
+	router.PathPrefix("/").Handler(fileHandler)
+	/*
+		router.PathPrefix("/assets/").Handler(fileHandler)
+		router.PathPrefix("/images/").Handler(fileHandler)
+		router.Path("/crossdomain.xml").Handler(fileHandler)
+		router.Path("/robots.txt").Handler(fileHandler)
+		router.NotFoundHandler = http.HandlerFunc(notFound)
+	*/
 	return router
 }
 
