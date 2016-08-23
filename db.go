@@ -342,29 +342,29 @@ func InsertImage(image Image) (int, error) {
 	return int(imageId), nil
 }
 
-func InsertPage(page Page) error {
+func InsertPage(page Page) (int, error) {
 	query := "INSERT INTO pages (page_title, page_type, unit_id) VALUES ($1, $2, $3) RETURNING page_id;"
 	var pageId int
 	err := db.QueryRow(query, page.Title, page.PageType, page.UnitID).Scan(&pageId)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	tx, err := db.Begin()
 	if err != nil {
-		return err
+		return 0, err
 	}
 	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, right_markdown, page_id) VALUES ($1, $2, $3);")
 	for _, row := range page.Rows {
 		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, pageId)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 	err = tx.Commit()
 	if err != nil {
-		return err
+		return 0, err
 	}
-	return nil
+	return pageId, nil
 }
 
 func GetUserById(userId int) (User, error) {

@@ -160,14 +160,24 @@ var PageCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r, err)
 		return
 	}
-	if err := json.Unmarshal(body, &page); err != nil {
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
 		notParsable(w, r, err)
 		return
 	}
-	if err := InsertPage(page); err != nil {
+	if err := json.Unmarshal(*objmap["page"], &page); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	fmt.Println(page)
+	if id, err := InsertPage(page); err != nil {
 		internalError(w, r, err)
 	} else {
+		page.ID = id
 		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"page": page}); err != nil {
+			panic(err)
+		}
 	}
 })
 
