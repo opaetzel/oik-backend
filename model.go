@@ -29,7 +29,7 @@ type Row struct {
 type Page struct {
 	Title     string `json:"title" db:"title"`
 	Rows      []Row  `json:"rows" db:"rows"`
-	UnitID    int    `json:"unit_id" db:"unit_id"`
+	UnitID    int    `json:"unit" db:"unit_id"`
 	PageType  string `json:"page_type" db:"page_type"`
 	ID        int    `json:"id" db:"id"`
 	userId    int

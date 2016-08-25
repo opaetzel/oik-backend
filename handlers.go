@@ -96,8 +96,13 @@ var UserUpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		internalError(w, r, err)
 	}
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
 	var unit Unit
-	if err := json.Unmarshal(body, &unit); err != nil {
+	if err := json.Unmarshal(*objmap["unit"], &unit); err != nil {
 		notParsable(w, r, err)
 		return
 	}
@@ -115,7 +120,14 @@ var UserUpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		notParsable(w, r, err)
 		return
 	} else if id == unit.UserId {
-		UpdateUnitUser(unit)
+		err := UpdateUnitUser(unit)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		if _, err := w.Write([]byte("{}")); err != nil {
+			panic(err)
+		}
 	} else {
 		unauthorized(w, r)
 	}
@@ -208,8 +220,13 @@ var UserUpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 			internalError(w, r, err)
 			return
 		}
+		var objmap map[string]*json.RawMessage
+		if err := json.Unmarshal(body, &objmap); err != nil {
+			notParsable(w, r, err)
+			return
+		}
 		var page Page
-		err = json.Unmarshal(body, &page)
+		err = json.Unmarshal(*objmap["page"], &page)
 		if err != nil {
 			notParsable(w, r, err)
 			return
@@ -219,6 +236,9 @@ var UserUpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 			internalError(w, r, err)
 		} else {
 			w.WriteHeader(http.StatusOK)
+			if _, err := w.Write([]byte("{}")); err != nil {
+				panic(err)
+			}
 		}
 	}
 })
@@ -301,7 +321,12 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 		internalError(w, r, err)
 		return
 	}
-	if err := json.Unmarshal(body, &login); err != nil {
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	if err := json.Unmarshal(*objmap["register"], &login); err != nil {
 		notParsable(w, r, err)
 		return
 	}
@@ -325,7 +350,12 @@ var UnitCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r, err)
 		return
 	}
-	if err := json.Unmarshal(body, &unit); err != nil {
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	if err := json.Unmarshal(*objmap["unit"], &unit); err != nil {
 		notParsable(w, r, err)
 		return
 	} else {
@@ -335,6 +365,9 @@ var UnitCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(unit); err != nil {
+			panic(err)
+		}
 	}
 })
 

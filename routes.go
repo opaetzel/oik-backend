@@ -20,7 +20,7 @@ var authRoutes = Routes{
 	},
 	Route{
 		"UserUpdateUnit",
-		"PATCH",
+		"PUT",
 		"/units/{unitId}",
 		UserUpdateUnit,
 	},
@@ -32,7 +32,7 @@ var authRoutes = Routes{
 	},
 	Route{
 		"PageUpdate",
-		"PATCH",
+		"PUT",
 		"/pages/{pageId}",
 		UserUpdatePage,
 	},
