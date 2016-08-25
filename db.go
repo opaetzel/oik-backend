@@ -90,9 +90,9 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 		var user_id int
 		var color_scheme int
 		var unit_id int
-		var pages_arr string
+		var pages_arr, images_arr string
 
-		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr)
+		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr)
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +101,12 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 		if err != nil {
 			return nil, err
 		}
-		units = append(units, Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, unit_id})
+		var images []int
+		err = json.Unmarshal([]byte(images_arr), &images)
+		if err != nil {
+			return nil, err
+		}
+		units = append(units, Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, unit_id})
 	}
 	return units, nil
 }
@@ -113,9 +118,9 @@ func parseUnit(row *sql.Row) (Unit, error) {
 	var user_id int
 	var color_scheme int
 	var unit_id int
-	var pages_arr string
+	var pages_arr, images_arr string
 
-	err := row.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr)
+	err := row.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr)
 	if err != nil {
 		return Unit{}, err
 	}
@@ -124,16 +129,21 @@ func parseUnit(row *sql.Row) (Unit, error) {
 	if err != nil {
 		return Unit{}, err
 	}
-	return Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, unit_id}, nil
+	var images []int
+	err = json.Unmarshal([]byte(images_arr), &images)
+	if err != nil {
+		return Unit{}, err
+	}
+	return Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, unit_id}, nil
 }
 
 func GetUnit(unitId int) (Unit, error) {
-	row := db.QueryRow("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id WHERE units.unit_id=$1 GROUP BY units.unit_id;", unitId)
+	row := db.QueryRow("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id) AS images_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id WHERE units.unit_id=$1 GROUP BY units.unit_id;", unitId)
 	return parseUnit(row)
 }
 
 func GetAllUnits() ([]Unit, error) {
-	rows, err := db.Query("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id GROUP BY units.unit_id;")
+	rows, err := db.Query("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id) AS images_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id GROUP BY units.unit_id;")
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +160,7 @@ func GetUserUnits(userId int) ([]Unit, error) {
 }
 */
 func GetPublishedUnits() ([]Unit, error) {
-	rows, err := db.Query("SELECT units.*, json_agg(pages.page_id) AS pages_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id WHERE units.published=true GROUP BY units.unit_id;")
+	rows, err := db.Query("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id) FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id WHERE units.published=true GROUP BY units.unit_id;")
 	if err != nil {
 		return nil, err
 	}
@@ -368,7 +378,7 @@ func InsertPage(page Page) (int, error) {
 }
 
 func GetUserById(userId int) (User, error) {
-	query := `SELECT users.username, json_agg(units.unit_id) AS units, json_agg(groups.group_name) FROM users 
+	query := `SELECT users.username, json_agg(DISTINCT units.unit_id) AS units, json_agg(DISTINCT groups.group_name) FROM users 
 		LEFT JOIN units ON units.user_id=users.user_id 
 		LEFT JOIN user_groups ON users.user_id=user_groups.user_id 
 		LEFT JOIN groups ON user_groups.group_id = groups.group_id

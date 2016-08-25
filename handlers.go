@@ -414,19 +414,30 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if image.UserId != userId {
+		log.Println("userid != image.userid", userId, "!=", image.UserId)
 		unauthorized(w, r)
 		return
 	}
-	contentType := r.Header.Get("Content-Type")
-	if contentType == "" || (contentType != "image/jpeg" && contentType != "image/png") {
-		log.Println(contentType)
-		notAcceptable(w, r)
+	/*
+		contentType := r.Header.Get("Content-Type")
+		if contentType == "" || (contentType != "image/jpeg" && contentType != "image/png") {
+			log.Println(contentType)
+			notAcceptable(w, r)
+			return
+		}
+		extension := ".jpg"
+		if contentType == "image/png" {
+			extension = ".png"
+		}
+	*/
+	extension := ".png"
+	r.ParseMultipartForm(32 << 20)
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		notParsable(w, r, err)
 		return
 	}
-	extension := ".jpg"
-	if contentType == "image/png" {
-		extension = ".png"
-	}
+	defer file.Close()
 	imageDir := filepath.Join(conf.ImageStorage, strconv.Itoa(image.UserId))
 	os.MkdirAll(imageDir, 0755)
 	imagePath := filepath.Join(imageDir, strconv.Itoa(image.ID)+extension)
@@ -436,7 +447,7 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	defer outFile.Close()
-	_, err = io.Copy(outFile, r.Body)
+	_, err = io.Copy(outFile, file)
 	if err != nil {
 		internalError(w, r, err)
 		return

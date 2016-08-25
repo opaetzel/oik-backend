@@ -42,7 +42,8 @@ type Unit struct {
 	PageIds     []int  `json:"pages" db:"pageids"`
 	Published   bool   `json:"published" db:"published"`
 	ColorScheme int    `json:"color_scheme" db:"color_scheme"`
-	UserId      int    `json:"userId" db:"userid"`
+	UserId      int    `json:"user" db:"userid"`
+	ImageIds    []int  `json:"images" db:"image_ids"`
 	ID          int    `json:"id" db:"id"`
 }
 
