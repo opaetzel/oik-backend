@@ -173,11 +173,11 @@ func GetPageOwner(pageId int) (int, error) {
 }
 
 func UpdatePage(page Page) error {
-	stmt, err := db.Prepare("UPDATE pages SET (page_title) VALUES ($1);")
+	stmt, err := db.Prepare("UPDATE pages SET page_title=$1, page_type=$2;")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(page.Title)
+	_, err = stmt.Exec(page.Title, page.PageType)
 	if err != nil {
 		return err
 	}
@@ -185,7 +185,7 @@ func UpdatePage(page Page) error {
 	if err != nil {
 		return err
 	}
-	stmt, err = tx.Prepare("UPDATE rows SET (left_markdown, right_markdown) VALUES ($1, $2);")
+	stmt, err = tx.Prepare("UPDATE rows SET left_markdown=$1, right_markdown=$2;")
 	for _, row := range page.Rows {
 		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown)
 		if err != nil {
@@ -264,7 +264,7 @@ func InsertUnit(unit Unit) error {
 }
 
 func UpdateUnitAdmin(unit Unit) error {
-	stmt, err := db.Prepare("UPDATE units SET (unit_title, published, rotate_image_id, color_scheme) VALUES ($1, $2, $3, $4);")
+	stmt, err := db.Prepare("UPDATE units SET unit_title=$1, published=$2, rotate_image_id=$3, color_scheme=$4;")
 	if err != nil {
 		return err
 	}
@@ -276,7 +276,7 @@ func UpdateUnitAdmin(unit Unit) error {
 }
 
 func UpdateUnitUser(unit Unit) error {
-	stmt, err := db.Prepare("UPDATE units SET (unit_title, rotate_image_id, color_scheme) VALUES ($1, $2, $3);")
+	stmt, err := db.Prepare("UPDATE units SET unit_title=$1, rotate_image_id=$2, color_scheme=$3;")
 	if err != nil {
 		return err
 	}
