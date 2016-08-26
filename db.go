@@ -357,9 +357,13 @@ func GetImageById(imageId int) (Image, error) {
 	var published bool
 	var userId, unitId int
 	var path, caption, credits string
-	err := row.Scan(&published, &userId, &path, &caption, &credits, &unitId)
+	var nullPath sql.NullString
+	err := row.Scan(&published, &userId, &nullPath, &caption, &credits, &unitId)
 	if err != nil {
 		return Image{}, err
+	}
+	if nullPath.Valid {
+		path = nullPath.String
 	}
 	return Image{path, caption, credits, unitId, userId, imageId, published}, nil
 }
