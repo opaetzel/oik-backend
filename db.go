@@ -104,7 +104,7 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 		} else {
 			err = json.Unmarshal([]byte(pages_arr), &pages)
 			if err != nil {
-				return Unit{}, err
+				return nil, err
 			}
 		}
 		var images []int
@@ -113,7 +113,7 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 		} else {
 			err = json.Unmarshal([]byte(images_arr), &images)
 			if err != nil {
-				return Unit{}, err
+				return nil, err
 			}
 		}
 		units = append(units, Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, unit_id})
@@ -236,7 +236,7 @@ func parsePage(row *sql.Row) (Page, error) {
 	}
 	var rows []Row
 	if jsonRows == emptyArr {
-		rows = make([]int, 0)
+		rows = make([]Row, 0)
 	} else {
 		if err := json.Unmarshal([]byte(jsonRows), &rows); err != nil {
 			return Page{}, err
