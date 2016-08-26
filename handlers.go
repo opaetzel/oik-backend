@@ -378,7 +378,12 @@ var CreateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		internalError(w, r, err)
 		return
 	}
-	if err := json.Unmarshal(body, &image); err != nil {
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	if err := json.Unmarshal(*objmap["image"], &image); err != nil {
 		notParsable(w, r, err)
 		return
 	} else {
@@ -485,7 +490,7 @@ var RotateImageByIdAndNumber = http.HandlerFunc(func(w http.ResponseWriter, r *h
 	sendRotateImage(w, r, imageFolder, number)
 })
 
-var ImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var ImageJSONById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	imageId, err := strconv.Atoi(vars["imageId"])
 	if err != nil {
@@ -498,6 +503,36 @@ var ImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//TODO: In frontend: send xhr with token on un-published images
+	if !image.published {
+		user, err := getUserFromRequest(r)
+		if err != nil {
+			log.Println(err)
+			unauthorized(w, r)
+			return
+		}
+		if user.ID != image.UserId && !stringInSlice("admin", user.Groups) {
+			unauthorized(w, r)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{"image": image}); err != nil {
+		panic(err)
+	}
+})
+
+var ImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	imageId, err := strconv.Atoi(vars["imageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	image, err := GetImageById(imageId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
 	if !image.published {
 		user, err := getUserFromRequest(r)
 		if err != nil {

@@ -78,6 +78,12 @@ var publicRoutes = Routes{
 	Route{
 		"ImageById",
 		"GET",
+		"/images/{imageId}",
+		ImageJSONById,
+	},
+	Route{
+		"GetImageById",
+		"GET",
 		"/get-image/{imageId}",
 		ImageById,
 	},

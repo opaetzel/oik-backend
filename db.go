@@ -12,6 +12,8 @@ import (
 
 var db *sqlx.DB
 
+var emptyArr = "[null]"
+
 var schema = `
 CREATE TABLE IF NOT EXISTS units (
 	unit_title varchar,
@@ -97,14 +99,22 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 			return nil, err
 		}
 		var pages []int
-		err = json.Unmarshal([]byte(pages_arr), &pages)
-		if err != nil {
-			return nil, err
+		if pages_arr == emptyArr {
+			pages = make([]int, 0)
+		} else {
+			err = json.Unmarshal([]byte(pages_arr), &pages)
+			if err != nil {
+				return Unit{}, err
+			}
 		}
 		var images []int
-		err = json.Unmarshal([]byte(images_arr), &images)
-		if err != nil {
-			return nil, err
+		if images_arr == emptyArr {
+			images = make([]int, 0)
+		} else {
+			err = json.Unmarshal([]byte(images_arr), &images)
+			if err != nil {
+				return Unit{}, err
+			}
 		}
 		units = append(units, Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, unit_id})
 	}
@@ -125,14 +135,22 @@ func parseUnit(row *sql.Row) (Unit, error) {
 		return Unit{}, err
 	}
 	var pages []int
-	err = json.Unmarshal([]byte(pages_arr), &pages)
-	if err != nil {
-		return Unit{}, err
+	if pages_arr == emptyArr {
+		pages = make([]int, 0)
+	} else {
+		err = json.Unmarshal([]byte(pages_arr), &pages)
+		if err != nil {
+			return Unit{}, err
+		}
 	}
 	var images []int
-	err = json.Unmarshal([]byte(images_arr), &images)
-	if err != nil {
-		return Unit{}, err
+	if images_arr == emptyArr {
+		images = make([]int, 0)
+	} else {
+		err = json.Unmarshal([]byte(images_arr), &images)
+		if err != nil {
+			return Unit{}, err
+		}
 	}
 	return Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, unit_id}, nil
 }
@@ -217,8 +235,12 @@ func parsePage(row *sql.Row) (Page, error) {
 		return Page{}, err
 	}
 	var rows []Row
-	if err := json.Unmarshal([]byte(jsonRows), &rows); err != nil {
-		return Page{}, err
+	if jsonRows == emptyArr {
+		rows = make([]int, 0)
+	} else {
+		if err := json.Unmarshal([]byte(jsonRows), &rows); err != nil {
+			return Page{}, err
+		}
 	}
 	return Page{pageTitle, rows, unitId, page_type, pageId, userId, published}, nil
 }
@@ -394,8 +416,12 @@ func GetUserById(userId int) (User, error) {
 		return User{}, err
 	}
 	var units []int
-	if err := json.Unmarshal([]byte(jsonUnits), &units); err != nil {
-		return User{}, err
+	if jsonUnits == emptyArr {
+		units = make([]int, 0)
+	} else {
+		if err := json.Unmarshal([]byte(jsonUnits), &units); err != nil {
+			return User{}, err
+		}
 	}
 	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId}
 	return u, nil

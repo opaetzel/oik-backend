@@ -6,7 +6,7 @@ type Image struct {
 	path      string
 	Caption   string `json:"caption" db:"caption"`
 	Credits   string `json:"credits" db:"credits"`
-	UnitId    int    `json:"unit_id" db:"unit_id"`
+	UnitId    int    `json:"unit" db:"unit_id"`
 	UserId    int    `json:"user_id" db:"user_id"`
 	ID        int    `json:"id" db:"id"`
 	published bool
