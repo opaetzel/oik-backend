@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS pages (
 CREATE TABLE IF NOT EXISTS rows (
 	left_markdown text,
 	right_markdown text,
+	leftImage integer,
+	rightImage integer,
 	page_id integer,
 	row_id SERIAL PRIMARY KEY
 );
