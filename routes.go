@@ -48,6 +48,12 @@ var authRoutes = Routes{
 		"/images/{imageId}",
 		UploadImage,
 	},
+	Route{
+		"GetUsers",
+		"GET",
+		"/users",
+		AllUsers,
+	},
 }
 
 var publicRoutes = Routes{

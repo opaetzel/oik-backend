@@ -21,7 +21,7 @@ type User struct {
 	ID       int      `json:"id" db:"user_id"`
 	salt     string
 	pwHash   string
-	active   bool
+	Active   bool `json:"active"`
 }
 
 type LoginStruct struct {

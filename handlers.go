@@ -291,7 +291,7 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 			internalError(w, r, err)
 			return
 		}
-		if bytes.Equal(pwHashBytes, hash) && user.active {
+		if bytes.Equal(pwHashBytes, hash) && user.Active {
 			token := jwt.New(jwt.SigningMethodHS256)
 			claims := make(jwt.MapClaims)
 
@@ -546,4 +546,25 @@ var ImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sendImage(w, r, image.path)
+})
+
+var AllUsers = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromRequest(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if !user.isInGroup("admin") {
+		unauthorized(w, r)
+		return
+	}
+	users, err := GetAllUsers()
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{"users": users}); err != nil {
+		panic(err)
+	}
 })

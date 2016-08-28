@@ -455,9 +455,45 @@ func InsertUser(user User) error {
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(user.Username, user.salt, user.pwHash, user.active)
+	_, err = stmt.Exec(user.Username, user.salt, user.pwHash, user.Active)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func GetAllUsers() ([]User, error) {
+	query := `SELECT users.username, users.active, users.user_id, json_agg(DISTINCT units.unit_id) AS units, json_agg(DISTINCT groups.group_name) FROM users 
+		LEFT JOIN units ON units.user_id=users.user_id 
+		LEFT JOIN user_groups ON users.user_id=user_groups.user_id 
+		LEFT JOIN groups ON user_groups.group_id = groups.group_id
+		GROUP BY users.user_id`
+	rows, err := db.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	users := make([]User, 0)
+	for rows.Next() {
+		var dbUsername, jsonUnits, jsonGroups string
+		var active bool
+		var userId int
+		err := rows.Scan(&dbUsername, &active, &userId, &jsonUnits, &jsonGroups)
+		if err != nil {
+			return nil, err
+		}
+		var groups []string
+		if err := json.Unmarshal([]byte(jsonGroups), &groups); err != nil {
+			return nil, err
+		}
+		var units []int
+		if jsonUnits == emptyArr {
+			units = make([]int, 0)
+		} else {
+			if err := json.Unmarshal([]byte(jsonUnits), &units); err != nil {
+				return nil, err
+			}
+		}
+		users = append(users, User{Username: dbUsername, Units: units, Groups: groups, Active: active, ID: userId})
+	}
+	return users, nil
 }
