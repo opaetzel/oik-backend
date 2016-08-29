@@ -359,13 +359,14 @@ var UnitCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		notParsable(w, r, err)
 		return
 	} else {
-		err := InsertUnit(unit)
+		id, err := InsertUnit(unit)
 		if err != nil {
 			internalError(w, r, err)
 			return
 		}
+		unit.ID = id
 		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(unit); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"unit": unit}); err != nil {
 			panic(err)
 		}
 	}
@@ -387,6 +388,7 @@ var CreateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		notParsable(w, r, err)
 		return
 	} else {
+		log.Println(image)
 		imageId, err := InsertImage(image)
 		if err != nil {
 			internalError(w, r, err)

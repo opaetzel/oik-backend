@@ -96,7 +96,7 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 		var unit_id int
 		var pages_arr, images_arr string
 
-		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr)
+		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &unit_id, &color_scheme, &pages_arr, &images_arr)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +132,7 @@ func parseUnit(row *sql.Row) (Unit, error) {
 	var unit_id int
 	var pages_arr, images_arr string
 
-	err := row.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr)
+	err := row.Scan(&unit_title, &published, &rotate_image_id, &user_id, &unit_id, &color_scheme, &pages_arr, &images_arr)
 	if err != nil {
 		return Unit{}, err
 	}
@@ -285,16 +285,15 @@ func GetUserPageById(pageId, userId int) (Page, error) {
 	return parsePage(row)
 }
 */
-func InsertUnit(unit Unit) error {
-	stmt, err := db.Prepare("INSERT INTO units (unit_title, published, rotate_image_id, user_id, color_scheme) VALUES ($1, $2, $3, $4, $5)")
+func InsertUnit(unit Unit) (int, error) {
+	log.Println(unit.Title)
+	row := db.QueryRow("INSERT INTO units (unit_title, published, rotate_image_id, user_id, color_scheme) VALUES ($1, $2, $3, $4, $5) RETURNING units.unit_id", unit.Title, unit.Published, unit.UnitImageID, unit.UserId, unit.ColorScheme)
+	var id int
+	err := row.Scan(&id)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	_, err = stmt.Exec(unit.Title, unit.Published, unit.UnitImageID, unit.UserId, unit.ColorScheme)
-	if err != nil {
-		return err
-	}
-	return nil
+	return id, nil
 }
 
 func UpdateUnitAdmin(unit Unit) error {
