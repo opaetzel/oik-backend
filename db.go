@@ -215,9 +215,9 @@ func UpdatePage(page Page) error {
 	if err != nil {
 		return err
 	}
-	stmt, err = tx.Prepare("UPDATE rows SET left_markdown=$1, right_markdown=$2;")
+	stmt, err = tx.Prepare("UPDATE rows SET left_markdown=$1, right_markdown=$2, leftimage=$3, rightimage=$4;")
 	for _, row := range page.Rows {
-		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown)
+		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, row.LeftImage, row.RightImage)
 		if err != nil {
 			return err
 		}
@@ -390,9 +390,9 @@ func InsertPage(page Page) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, right_markdown, page_id) VALUES ($1, $2, $3);")
+	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, right_markdown, leftimage, rightimage page_id) VALUES ($1, $2, $3, $4, $5);")
 	for _, row := range page.Rows {
-		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, pageId)
+		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, row.LeftImage, row.RightImage, pageId)
 		if err != nil {
 			return 0, err
 		}
