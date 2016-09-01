@@ -390,7 +390,10 @@ func InsertPage(page Page) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, right_markdown, leftimage, rightimage page_id) VALUES ($1, $2, $3, $4, $5);")
+	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, right_markdown, leftimage, rightimage, page_id) VALUES ($1, $2, $3, $4, $5);")
+	if err != nil {
+		return 0, err
+	}
 	for _, row := range page.Rows {
 		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, row.LeftImage, row.RightImage, pageId)
 		if err != nil {

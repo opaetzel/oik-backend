@@ -326,7 +326,7 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 		notParsable(w, r, err)
 		return
 	}
-	if err := json.Unmarshal(*objmap["register"], &login); err != nil {
+	if err := json.Unmarshal(*objmap["newuser"], &login); err != nil {
 		notParsable(w, r, err)
 		return
 	}
@@ -340,6 +340,11 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	if err := InsertUser(user); err != nil {
 		internalError(w, r, err)
 		return
+	} else {
+		w.WriteHeader(http.StatusCreated)
+		if _, err := w.Write([]byte("{}")); err != nil {
+			panic(err)
+		}
 	}
 })
 

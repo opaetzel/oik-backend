@@ -114,7 +114,7 @@ var publicRoutes = Routes{
 	Route{
 		"Register",
 		"POST",
-		"/register",
+		"/newusers",
 		RegisterHandler,
 	},
 }
