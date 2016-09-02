@@ -23,8 +23,8 @@ type RotateImage struct {
 type Row struct {
 	LeftMarkdown  string `json:"left_markdown" db:"left_markdown"`
 	RightMarkdown string `json:"right_markdown" db:"right_markdown"`
-	LeftImage     int    `json:"leftImage" db:"leftImage"`
-	RightImage    int    `json:"rightImage" db:"rightImage"`
+	LeftImage     int    `json:"leftImage,omitempty" db:"leftImage"`
+	RightImage    int    `json:"rightImage,omitempty" db:"rightImage"`
 	ID            int    `json:"id" db:"row_id"`
 }
 
