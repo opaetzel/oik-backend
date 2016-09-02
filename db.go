@@ -379,32 +379,37 @@ func InsertImage(image Image) (int, error) {
 	return int(imageId), nil
 }
 
-func InsertPage(page Page) (int, error) {
+func InsertPage(page Page) (Page, error) {
 	query := "INSERT INTO pages (page_title, page_type, unit_id) VALUES ($1, $2, $3) RETURNING page_id;"
 	var pageId int
 	err := db.QueryRow(query, page.Title, page.PageType, page.UnitID).Scan(&pageId)
 	if err != nil {
-		return 0, err
+		return Page{}, err
 	}
+	page.ID = pageId
 	tx, err := db.Begin()
 	if err != nil {
-		return 0, err
+		return Page{}, err
 	}
-	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, right_markdown, leftimage, rightimage, page_id) VALUES ($1, $2, $3, $4, $5);")
+	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, right_markdown, leftimage, rightimage, page_id) VALUES ($1, $2, $3, $4, $5) RETURNING row_id;")
 	if err != nil {
-		return 0, err
+		return Page{}, err
 	}
-	for _, row := range page.Rows {
-		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, row.LeftImage, row.RightImage, pageId)
+	for idx, row := range page.Rows {
+		var rowId int
+		err := stmt.QueryRow(row.LeftMarkdown, row.RightMarkdown, row.LeftImage, row.RightImage, pageId).Scan(&rowId)
 		if err != nil {
-			return 0, err
+			return Page{}, err
 		}
+		log.Println(rowId)
+		page.Rows[idx].ID = rowId
 	}
+	log.Println(page.Rows)
 	err = tx.Commit()
 	if err != nil {
-		return 0, err
+		return Page{}, err
 	}
-	return pageId, nil
+	return page, nil
 }
 
 func GetUserById(userId int) (User, error) {
