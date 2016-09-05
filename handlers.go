@@ -78,6 +78,28 @@ var UserById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}
 })
 
+var Units = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	publishedFilter := r.URL.Query().Get("filter[published]")
+	if len(publishedFilter) == 0 || publishedFilter == "true" {
+		units, err := GetPublishedUnits()
+		if err != nil {
+			internalError(w, r, err)
+		}
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"units": units}); err != nil {
+			panic(err)
+		}
+	} else {
+		units, err := GetUnPublishedUnits()
+		if err != nil {
+			internalError(w, r, err)
+		}
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"units": units}); err != nil {
+			panic(err)
+		}
+	}
+})
+
 var PublishedUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	if units, err := GetPublishedUnits(); err != nil {

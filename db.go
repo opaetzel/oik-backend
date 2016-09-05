@@ -96,7 +96,7 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 		var unit_id int
 		var pages_arr, images_arr string
 
-		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &unit_id, &color_scheme, &pages_arr, &images_arr)
+		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr)
 		if err != nil {
 			return nil, err
 		}
@@ -179,6 +179,14 @@ func GetUserUnits(userId int) ([]Unit, error) {
 	return parseUnits(rows)
 }
 */
+func GetUnPublishedUnits() ([]Unit, error) {
+	rows, err := db.Query("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id) FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id WHERE units.published=false GROUP BY units.unit_id;")
+	if err != nil {
+		return nil, err
+	}
+	return parseUnits(rows)
+}
+
 func GetPublishedUnits() ([]Unit, error) {
 	rows, err := db.Query("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id) FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id WHERE units.published=true GROUP BY units.unit_id;")
 	if err != nil {

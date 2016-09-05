@@ -61,7 +61,7 @@ var publicRoutes = Routes{
 		"PublishedUnits",
 		"GET",
 		"/units",
-		PublishedUnits,
+		Units,
 	},
 	Route{
 		"UnitById",
