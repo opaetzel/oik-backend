@@ -132,7 +132,7 @@ func parseUnit(row *sql.Row) (Unit, error) {
 	var unit_id int
 	var pages_arr, images_arr string
 
-	err := row.Scan(&unit_title, &published, &rotate_image_id, &user_id, &unit_id, &color_scheme, &pages_arr, &images_arr)
+	err := row.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr)
 	if err != nil {
 		return Unit{}, err
 	}
