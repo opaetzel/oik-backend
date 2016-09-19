@@ -211,11 +211,11 @@ func GetPageOwner(pageId int) (int, error) {
 }
 
 func UpdatePage(page Page) error {
-	stmt, err := db.Prepare("UPDATE pages SET page_title=$1, page_type=$2;")
+	stmt, err := db.Prepare("UPDATE pages SET page_title=$1, page_type=$2 WHERE page_id=$5;")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(page.Title, page.PageType)
+	_, err = stmt.Exec(page.Title, page.PageType, page.ID)
 	if err != nil {
 		return err
 	}
