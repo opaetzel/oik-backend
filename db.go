@@ -223,9 +223,9 @@ func UpdatePage(page Page) error {
 	if err != nil {
 		return err
 	}
-	stmt, err = tx.Prepare("UPDATE rows SET left_markdown=$1, right_markdown=$2, leftimage=$3, rightimage=$4;")
+	stmt, err = tx.Prepare("UPDATE rows SET left_markdown=$1, right_markdown=$2, leftimage=$3, rightimage=$4 WHERE row_id=$5;")
 	for _, row := range page.Rows {
-		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, row.LeftImage, row.RightImage)
+		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, row.LeftImage, row.RightImage, row.ID)
 		if err != nil {
 			return err
 		}
