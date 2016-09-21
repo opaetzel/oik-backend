@@ -90,6 +90,7 @@ var Units = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 	} else {
+		//TODO: check for admin rights here
 		units, err := GetUnPublishedUnits()
 		if err != nil {
 			internalError(w, r, err)

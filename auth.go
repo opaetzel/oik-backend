@@ -59,7 +59,7 @@ func (r *User) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-//this only checks if user is in role admin, the jwt has to be checked before this
+//this only checks if user is in given role, the jwt has to be checked before this
 func (rr *RequireRole) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//check if is in role
 	user := context.Get(r, "user")

@@ -11,7 +11,7 @@ type Route struct {
 
 type Routes []Route
 
-var authRoutes = Routes{
+var editorRoutes = Routes{
 	Route{
 		"UnitCreate",
 		"POST",
@@ -48,6 +48,9 @@ var authRoutes = Routes{
 		"/images/{imageId}",
 		UploadImage,
 	},
+}
+
+var authRoutes = Routes{
 	Route{
 		"GetUsers",
 		"GET",

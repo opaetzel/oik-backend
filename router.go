@@ -30,6 +30,12 @@ func NewRouter() *mux.Router {
 		handler = jwtRequiredMiddleware.Handler(route.Handler)
 		registerRoute(api, route, handler)
 	}
+	for _, route := range editorRoutes {
+		var handler http.Handler
+		handler = jwtRequiredMiddleware.Handler(NewRequireRole(route.Handler, "editor"))
+		registerRoute(api, route, handler)
+	}
+
 	fs := http.Dir(conf.StaticFolder)
 	fileHandler := http.FileServer(fs)
 	router.PathPrefix("/app/").Handler(http.HandlerFunc(notFound))
