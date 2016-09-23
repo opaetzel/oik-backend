@@ -57,6 +57,12 @@ var authRoutes = Routes{
 		"/users",
 		AllUsers,
 	},
+	Route{
+		"UpdateUser",
+		"PUT",
+		"/users/{userId}",
+		UpdateUser,
+	},
 }
 
 var publicRoutes = Routes{

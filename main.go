@@ -13,6 +13,14 @@ import (
 	"github.com/gorilla/handlers"
 )
 
+type SMTPConfig struct {
+	UserName string
+	Password string
+	Host     string
+	Port     int
+	From     string
+}
+
 type Config struct {
 	UseTLS       bool
 	HTTPPort     int
@@ -24,6 +32,7 @@ type Config struct {
 	DBPassword   string
 	ImageStorage string
 	StaticFolder string
+	MailConfig   SMTPConfig
 }
 
 var conf Config

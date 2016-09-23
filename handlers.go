@@ -370,6 +370,47 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	}
 })
 
+var UpdateUser = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var user User
+	body, err := readBody(r)
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	if err := json.Unmarshal(*objmap["user"], &user); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	claims, err := GetJWTClaims(r)
+	if err != nil {
+		unauthorized(w, r)
+		return
+	}
+	claimId, ok := claims["uid"].(int)
+	if !ok {
+		internalError(w, r, errors.New("could not cast uid"))
+		return
+	}
+	if user.ID == claimId {
+		UserUpdateUser(user)
+		//TODO: send response with updated user
+	} else {
+		groups, err := GetClaimGroups(claims)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		if stringInSlice("admin", groups) {
+			AdminUpdateUser(user)
+			//TODO: send response with updated user
+		} else {
+			unauthorized(w, r)
+			return
+		}
+	}
+})
+
 var UnitCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	var unit Unit
 	body, err := readBody(r)

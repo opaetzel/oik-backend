@@ -59,25 +59,42 @@ func (r *User) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func GetJWTClaims(r *http.Request) (jwt.MapClaims, error) {
+	user := context.Get(r, "user")
+	claims, ok := user.(*jwt.Token).Claims.(jwt.MapClaims)
+	if !ok {
+		return nil, errors.New("could not cast claims")
+	} else {
+		return claims, nil
+	}
+}
+
+func GetClaimGroups(claims jwt.MapClaims) ([]string, error) {
+	claimGroups, ok := claims["groups"].([]interface{})
+	if !ok {
+		return nil, errors.New("could not cas groups(1)")
+	}
+	groups := make([]string, len(claimGroups))
+	for i, gr := range claimGroups {
+		group, ok := gr.(string)
+		if !ok {
+			return nil, errors.New("could not cast groups(2)")
+		}
+		groups[i] = group
+	}
+	return groups
+}
+
 //this only checks if user is in given role, the jwt has to be checked before this
 func (rr *RequireRole) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//check if is in role
 	user := context.Get(r, "user")
 	claims, ok := user.(*jwt.Token).Claims.(jwt.MapClaims)
 	if ok {
-		claimGroups, ok := claims["groups"].([]interface{})
-		if !ok {
-			internalError(w, r, errors.New("could not cast groups(1)"))
+		groups, err := GetClaimGroups(claims)
+		if err != nil {
+			internalError(w, r, err)
 			return
-		}
-		groups := make([]string, len(claimGroups))
-		for i, gr := range claimGroups {
-			group, ok := gr.(string)
-			if !ok {
-				internalError(w, r, errors.New("could not cast groups(2)"))
-				return
-			}
-			groups[i] = group
 		}
 		if stringInSlice(rr.role, groups) {
 			rr.handler.ServeHTTP(w, r)

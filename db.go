@@ -211,7 +211,7 @@ func GetPageOwner(pageId int) (int, error) {
 }
 
 func UpdatePage(page Page) error {
-	stmt, err := db.Prepare("UPDATE pages SET page_title=$1, page_type=$2 WHERE page_id=$5;")
+	stmt, err := db.Prepare("UPDATE pages SET page_title=$1, page_type=$2 WHERE page_id=$3;")
 	if err != nil {
 		return err
 	}
@@ -511,4 +511,30 @@ func GetAllUsers() ([]User, error) {
 		users = append(users, User{Username: dbUsername, Units: units, Groups: groups, Active: active, ID: userId})
 	}
 	return users, nil
+}
+
+func AdminUpdateUser(user User) error {
+	stmt, err := db.Prepare("UPDATE users SET active=$1;")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(user.Active)
+	if err != nil {
+		return err
+	}
+	//TODO update groups
+	return nil
+}
+
+func UserUpdateUser(user User) error {
+	//TODO find out wether active==emailVerified
+	stmt, err := db.Prepare("UPDATE users SET username=$1;")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(user.Username)
+	if err != nil {
+		return err
+	}
+	return nil
 }
