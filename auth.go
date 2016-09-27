@@ -1,11 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/smtp"
+	"strconv"
+	"text/template"
 
 	"golang.org/x/crypto/scrypt"
 
@@ -13,6 +17,12 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/context"
 )
+
+const mailTemplate = `To: {{.Recipient}}
+Subject: Registrierung Objekte im Kreuzverhör
+
+Bitte klicken Sie auf den Folgenden Link um Ihre Registrierung abzuschließen:
+{{.TokenLink}}`
 
 type User struct {
 	Username string   `json:"name" db:"username"`
@@ -22,11 +32,18 @@ type User struct {
 	salt     string
 	pwHash   string
 	Active   bool `json:"active"`
+	mailHash string
 }
 
 type LoginStruct struct {
 	Username string `json:"username" db:"username"`
 	Password string `json:"password" db:"password"`
+	Email    string `json:"email" db:"email"`
+}
+
+type MailTemplate struct {
+	Recipient string
+	TokenLink string
 }
 
 type RequireRole struct {
@@ -82,7 +99,7 @@ func GetClaimGroups(claims jwt.MapClaims) ([]string, error) {
 		}
 		groups[i] = group
 	}
-	return groups
+	return groups, nil
 }
 
 //this only checks if user is in given role, the jwt has to be checked before this
@@ -148,4 +165,26 @@ func HashNewPW(pw string) (salt string, hash []byte, err error) {
 	}
 	dk, err := HashPWWithSalt([]byte(pw), saltBytes)
 	return base64.StdEncoding.EncodeToString(saltBytes), dk, err
+}
+
+func sendRegistrationMail(recipient string, token string) error {
+	auth := smtp.PlainAuth("", conf.MailConfig.UserName, conf.MailConfig.Password, conf.MailConfig.Host)
+	to := []string{recipient}
+	// Connect to the server, authenticate, set the sender and recipient,
+	// and send the email all in one step.
+	mailInfo := MailTemplate{recipient, token}
+	var doc bytes.Buffer
+	t, err := template.New("mail").Parse(mailTemplate)
+	if err != nil {
+		return err
+	}
+	err = t.Execute(&doc, mailInfo)
+	if err != nil {
+		return err
+	}
+	err = smtp.SendMail(conf.MailConfig.Host+":"+strconv.Itoa(conf.MailConfig.Port), auth, conf.MailConfig.From, to, doc.Bytes())
+	if err != nil {
+		return err
+	}
+	return nil
 }

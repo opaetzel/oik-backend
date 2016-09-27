@@ -61,7 +61,8 @@ CREATE TABLE IF NOT EXISTS users (
 	salt varchar(255),
 	pwhash varchar(255),
 	active boolean,
-	user_id SERIAL PRIMARY KEY
+	user_id SERIAL PRIMARY KEY,
+	mailhash varchar(255)
 );
 
 CREATE TABLE IF NOT EXISTS groups (
@@ -450,10 +451,10 @@ func GetUserById(userId int) (User, error) {
 
 func GetUserByName(username string) (User, error) {
 	row := db.QueryRow("SELECT users.*, json_agg(groups.group_name) FROM users LEFT JOIN user_groups ON users.user_id=user_groups.user_id LEFT JOIN groups ON user_groups.group_id=groups.group_id WHERE username=$1 GROUP BY users.user_id", username)
-	var dbUsername, salt, pwhash, jsonGroups string
+	var dbUsername, salt, pwhash, jsonGroups, mailHash string
 	var active bool
 	var id int
-	err := row.Scan(&dbUsername, &salt, &pwhash, &active, &id, &jsonGroups)
+	err := row.Scan(&dbUsername, &salt, &pwhash, &active, &id, &mailHash, &jsonGroups)
 	if err != nil {
 		return User{}, err
 	}
@@ -461,20 +462,18 @@ func GetUserByName(username string) (User, error) {
 	if err := json.Unmarshal([]byte(jsonGroups), &groups); err != nil {
 		return User{}, err
 	}
-	u := User{dbUsername, groups, nil, id, salt, pwhash, active}
+	u := User{dbUsername, groups, nil, id, salt, pwhash, active, mailHash}
 	return u, nil
 }
 
-func InsertUser(user User) error {
-	stmt, err := db.Prepare("INSERT INTO users (username, salt, pwhash, active) VALUES ($1, $2, $3, $4);")
+func InsertUser(user User) (int, error) {
+	query := "INSERT INTO users (username, salt, pwhash, active) VALUES ($1, $2, $3, $4, $5) RETURNING user_id;"
+	var userId int
+	err := db.QueryRow(query, user.Username, user.salt, user.pwHash, user.Active, user.mailHash).Scan(&userId)
 	if err != nil {
-		return err
+		return -1, err
 	}
-	_, err = stmt.Exec(user.Username, user.salt, user.pwHash, user.Active)
-	if err != nil {
-		return err
-	}
-	return nil
+	return userId, nil
 }
 
 func GetAllUsers() ([]User, error) {

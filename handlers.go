@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -358,11 +359,28 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	b64hash := base64.StdEncoding.EncodeToString(pwhash)
-	user := User{login.Username, []string{"student"}, nil, 0, salt, b64hash, false}
-	if err := InsertUser(user); err != nil {
+	mailHash, err := HashPWWithSaltB64(login.Email, salt)
+	b64MailHash := base64.StdEncoding.EncodeToString(mailHash)
+	user := User{login.Username, []string{"student"}, nil, 0, salt, b64hash, false, b64MailHash}
+	if userId, err := InsertUser(user); err != nil {
 		internalError(w, r, err)
 		return
 	} else {
+		token := jwt.New(jwt.SigningMethodHS256)
+		claims := make(jwt.MapClaims)
+
+		claims["groups"] = make([]string, 0)
+		claims["name"] = user.Username
+		claims["exp"] = time.Now().Add(time.Hour * 12).Unix()
+		claims["uid"] = userId
+
+		token.Claims = claims
+
+		tokenString, _ := token.SignedString(mySigningKey)
+		if err := sendRegistrationMail(login.Email, tokenString); err != nil {
+			internalError(w, r, err)
+			return
+		}
 		w.WriteHeader(http.StatusCreated)
 		if _, err := w.Write([]byte("{}")); err != nil {
 			panic(err)
