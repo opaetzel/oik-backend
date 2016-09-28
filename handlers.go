@@ -377,7 +377,7 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 		token.Claims = claims
 
 		tokenString, _ := token.SignedString(mySigningKey)
-		if err := sendRegistrationMail(login.Email, tokenString); err != nil {
+		if err := sendRegistrationMail(login.Email, conf.AppUrl+"confirm-mail/"+tokenString); err != nil {
 			internalError(w, r, err)
 			return
 		}

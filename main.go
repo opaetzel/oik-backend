@@ -32,6 +32,7 @@ type Config struct {
 	DBPassword   string
 	ImageStorage string
 	StaticFolder string
+	AppUrl       string
 	MailConfig   SMTPConfig
 }
 
