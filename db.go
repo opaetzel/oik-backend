@@ -34,8 +34,12 @@ CREATE TABLE IF NOT EXISTS pages (
 CREATE TABLE IF NOT EXISTS rows (
 	left_markdown text,
 	right_markdown text,
+	left_has_image boolean,
+	right_has_image boolean,
 	leftImage integer,
 	rightImage integer,
+	left_is_argument boolean,
+	right_is_argument boolean,
 	page_id integer,
 	row_id SERIAL PRIMARY KEY
 );
@@ -224,9 +228,9 @@ func UpdatePage(page Page) error {
 	if err != nil {
 		return err
 	}
-	stmt, err = tx.Prepare("UPDATE rows SET left_markdown=$1, right_markdown=$2, leftimage=$3, rightimage=$4 WHERE row_id=$5;")
+	stmt, err = tx.Prepare("UPDATE rows SET left_markdown=$1, right_markdown=$2, left_has_image=$3, right_has_image=$4 leftimage=$5, rightimage=$6, left_is_argument=$7, right_is_argument=$8, WHERE row_id=$9;")
 	for _, row := range page.Rows {
-		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, row.LeftImage, row.RightImage, row.ID)
+		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, row.LeftHasImage, row.RightHasImage, row.LeftImage, row.RightImage, row.LeftIsArgument, row.RightIsArgument, row.ID)
 		if err != nil {
 			return err
 		}
@@ -400,13 +404,13 @@ func InsertPage(page Page) (Page, error) {
 	if err != nil {
 		return Page{}, err
 	}
-	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, right_markdown, leftimage, rightimage, page_id) VALUES ($1, $2, $3, $4, $5) RETURNING row_id;")
+	stmt, err := tx.Prepare("INSERT INTO rows (left_markdown, right_markdown, left_has_image, right_has_image, leftimage, rightimage, left_is_argument, right_is_argument, page_id) VALUES ($1, $2, $3, $4, $5 ,$6, $7, $8, $9) RETURNING row_id;")
 	if err != nil {
 		return Page{}, err
 	}
 	for idx, row := range page.Rows {
 		var rowId int
-		err := stmt.QueryRow(row.LeftMarkdown, row.RightMarkdown, row.LeftImage, row.RightImage, pageId).Scan(&rowId)
+		err := stmt.QueryRow(row.LeftMarkdown, row.RightMarkdown, row.LeftHasImage, row.RightHasImage, row.LeftImage, row.RightImage, row.LeftIsArgument, row.RightIsArgument, pageId).Scan(&rowId)
 		if err != nil {
 			return Page{}, err
 		}
