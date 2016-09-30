@@ -471,7 +471,7 @@ func GetUserByName(username string) (User, error) {
 }
 
 func InsertUser(user User) (int, error) {
-	query := "INSERT INTO users (username, salt, pwhash, active) VALUES ($1, $2, $3, $4, $5) RETURNING user_id;"
+	query := "INSERT INTO users (username, salt, pwhash, active, mailhash) VALUES ($1, $2, $3, $4, $5) RETURNING user_id;"
 	var userId int
 	err := db.QueryRow(query, user.Username, user.salt, user.pwHash, user.Active, user.mailHash).Scan(&userId)
 	if err != nil {

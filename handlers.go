@@ -405,11 +405,12 @@ var UpdateUser = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		unauthorized(w, r)
 		return
 	}
-	claimId, ok := claims["uid"].(int)
+	claimIdF, ok := claims["uid"].(float64)
 	if !ok {
 		internalError(w, r, errors.New("could not cast uid"))
 		return
 	}
+	claimId := int(claimIdF)
 	if user.ID == claimId {
 		UserUpdateUser(user)
 		//TODO: send response with updated user
