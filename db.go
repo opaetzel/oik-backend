@@ -517,11 +517,11 @@ func GetAllUsers() ([]User, error) {
 }
 
 func AdminUpdateUser(user User) error {
-	stmt, err := db.Prepare("UPDATE users SET active=$1;")
+	stmt, err := db.Prepare("UPDATE users SET active=$1 WHERE user_id=$2;")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(user.Active)
+	_, err = stmt.Exec(user.Active, user.ID)
 	if err != nil {
 		return err
 	}
@@ -531,11 +531,11 @@ func AdminUpdateUser(user User) error {
 
 func UserUpdateUser(user User) error {
 	//TODO find out wether active==emailVerified
-	stmt, err := db.Prepare("UPDATE users SET username=$1;")
+	stmt, err := db.Prepare("UPDATE users SET active=$1, username=$2 WHERE user_id=$3;")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(user.Username)
+	_, err = stmt.Exec(user.Active, user.Username, user.ID)
 	if err != nil {
 		return err
 	}
