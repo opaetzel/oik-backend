@@ -48,6 +48,18 @@ var editorRoutes = Routes{
 		"/images/{imageId}",
 		UploadImage,
 	},
+	Route{
+		"CreateRotateImage",
+		"POST",
+		"/rotate-images",
+		CreateRotateImage,
+	},
+	Route{
+		"UploadRotateImages",
+		"PUT",
+		"/rotate-images/{rotateImageId}",
+		UploadRotateImage,
+	},
 }
 
 var authRoutes = Routes{

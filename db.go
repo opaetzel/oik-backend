@@ -392,6 +392,16 @@ func InsertImage(image Image) (int, error) {
 	return int(imageId), nil
 }
 
+func InsertRotateImage(image RotateImage) (int, error) {
+	query := "INSERT INTO rotate_images (caption, credits, num) VALUES ($1, $2, $3) RETURNING image_id;"
+	var imageId int
+	err := db.QueryRow(query, image.Caption, image.Credits, image.Num).Scan(&imageId)
+	if err != nil {
+		return -1, err
+	}
+	return int(imageId), nil
+}
+
 func InsertPage(page Page) (Page, error) {
 	query := "INSERT INTO pages (page_title, page_type, unit_id) VALUES ($1, $2, $3) RETURNING page_id;"
 	var pageId int

@@ -524,14 +524,26 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 			extension = ".png"
 		}
 	*/
-	extension := ".png"
 	r.ParseMultipartForm(32 << 20)
-	file, _, err := r.FormFile("file")
+	file, header, err := r.FormFile("file")
 	if err != nil {
 		notParsable(w, r, err)
 		return
 	}
 	defer file.Close()
+	filename := (*header).Filename
+	splitFilename := strings.split(filename, ".")
+	if len(splitFilename) < 2 {
+		log.Printf("can not accept filename: %s\n", filename)
+		notAcceptable(w, r)
+		return
+	}
+	extension := "." + strings.ToLower(splitFilename[len(splitFilename)-1])
+	if extension != ".png" || extension != ".jpeg" || extension != ".jpg" {
+		log.Printf("can not accept filename: %s\n", filename)
+		notAcceptable(w, r)
+		return
+	}
 	imageDir := filepath.Join(conf.ImageStorage, strconv.Itoa(image.UserId))
 	os.MkdirAll(imageDir, 0755)
 	imagePath := filepath.Join(imageDir, strconv.Itoa(image.ID)+extension)
@@ -555,6 +567,125 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	}
 })
 
+var CreateRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var image Image
+	body, err := readBody(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	if err := json.Unmarshal(*objmap["rotate-image"], &image); err != nil {
+		notParsable(w, r, err)
+		return
+	} else {
+		log.Println(image)
+		imageId, err := InsertRotateImage(image)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		image.ID = imageId
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"rotate-image": image}); err != nil {
+			panic(err)
+		}
+	}
+})
+
+/*
+Awaits an tar.gz as FormFile. Extracts and saves image files from it.
+*/
+var UploadRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	userId, err := getUserId(r)
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	vars := mux.Vars(r)
+	imageId, err := strconv.Atoi(vars["imageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	log.Println("try to get image owner for image", imageId)
+	image, err := GetRotateImageById(imageId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if image.UserId != userId {
+		log.Println("userid != image.userid", userId, "!=", image.UserId)
+		unauthorized(w, r)
+		return
+	}
+	r.ParseMultipartForm(32 << 20)
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	defer file.Close()
+	//gunzip
+	gReader, err := gzip.NewReader(file)
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	defer gReader.Close()
+	//read tar container
+	tarReader, err := tar.NewReader(gReader)
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	defer tarReader.Close()
+	imageDir := filepath.Join(conf.ImageStorage, strconv.Itoa(image.UserId), strconv.Itoa(image.ID))
+	os.MkdirAll(imageDir, 0755)
+	imageCount := 0
+	for {
+		hdr, err := tarReader.Next()
+		if err == io.EOF {
+			// end of tar archive
+			break
+		}
+		if err != nil {
+			log.Printf("File not parsable\n")
+			notParsable(w, r, err)
+			return
+		}
+		splitFilename := strings.split(hdr.Name, ".")
+		if len(splitFilename) < 2 {
+			log.Printf("can not accept filename: %s\n", filename)
+			notAcceptable(w, r)
+			return
+		}
+		extension := "." + strings.ToLower(splitFilename[len(splitFilename)-1])
+		if extension != ".png" || extension != ".jpeg" || extension != ".jpg" {
+			log.Printf("can not accept filename: %s\n", filename)
+			notAcceptable(w, r)
+			return
+		}
+		imagePath := filepath.Join(imageDir, strconv.Itoa(imageCount)+extension)
+		outFile, err := os.Create(imagePath)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		defer outFile.Close()
+		_, err = io.Copy(outFile, tarReader)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		imageCount++
+	}
+	w.WriteHeader(http.StatusCreated)
+})
 var RotateImageByIdAndNumber = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	imageId, err := strconv.Atoi(vars["imageId"])
