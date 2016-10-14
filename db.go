@@ -382,6 +382,28 @@ func GetImageById(imageId int) (Image, error) {
 	return Image{path, caption, credits, unitId, userId, imageId, published}, nil
 }
 
+func GetRotateImageById(imageId int) (RotateImage, error) {
+	//TODO: get number of images from DB
+	query := `
+		SELECT units.published, units.user_id, rotate_images.basepath, rotate_images.caption, rotate_images.credits, rotate_images.unit_id FROM units
+		JOIN rotate_images ON rotate_images.unit_id = units.unit_id
+		WHERE rotate_images.rotate_image_id = $1;
+		`
+	row := db.QueryRow(query, imageId)
+	var published bool
+	var userId, unitId int
+	var path, caption, credits string
+	var nullPath sql.NullString
+	err := row.Scan(&published, &userId, &nullPath, &caption, &credits, &unitId)
+	if err != nil {
+		return RotateImage{}, err
+	}
+	if nullPath.Valid {
+		path = nullPath.String
+	}
+	return RotateImage{path, 36, caption, credits, unitId, userId, imageId, published}, nil
+}
+
 func InsertImage(image Image) (int, error) {
 	query := "INSERT INTO images (caption, credits, unit_id) VALUES ($1, $2, $3) RETURNING image_id;"
 	var imageId int

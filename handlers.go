@@ -1,7 +1,9 @@
 package main
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -12,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -532,7 +535,7 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	}
 	defer file.Close()
 	filename := (*header).Filename
-	splitFilename := strings.split(filename, ".")
+	splitFilename := strings.Split(filename, ".")
 	if len(splitFilename) < 2 {
 		log.Printf("can not accept filename: %s\n", filename)
 		notAcceptable(w, r)
@@ -568,7 +571,7 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 })
 
 var CreateRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	var image Image
+	var image RotateImage
 	body, err := readBody(r)
 	if err != nil {
 		internalError(w, r, err)
@@ -638,12 +641,11 @@ var UploadRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Req
 	}
 	defer gReader.Close()
 	//read tar container
-	tarReader, err := tar.NewReader(gReader)
+	tarReader := tar.NewReader(gReader)
 	if err != nil {
 		notParsable(w, r, err)
 		return
 	}
-	defer tarReader.Close()
 	imageDir := filepath.Join(conf.ImageStorage, strconv.Itoa(image.UserId), strconv.Itoa(image.ID))
 	os.MkdirAll(imageDir, 0755)
 	imageCount := 0
@@ -658,15 +660,15 @@ var UploadRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Req
 			notParsable(w, r, err)
 			return
 		}
-		splitFilename := strings.split(hdr.Name, ".")
+		splitFilename := strings.Split(hdr.Name, ".")
 		if len(splitFilename) < 2 {
-			log.Printf("can not accept filename: %s\n", filename)
+			log.Printf("can not accept filename: %s\n", hdr.Name)
 			notAcceptable(w, r)
 			return
 		}
 		extension := "." + strings.ToLower(splitFilename[len(splitFilename)-1])
 		if extension != ".png" || extension != ".jpeg" || extension != ".jpg" {
-			log.Printf("can not accept filename: %s\n", filename)
+			log.Printf("can not accept filename: %s\n", hdr.Name)
 			notAcceptable(w, r)
 			return
 		}

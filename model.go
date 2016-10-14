@@ -13,13 +13,14 @@ type Image struct {
 }
 
 type RotateImage struct {
-	basepath string `json:"basepath" db:"basepath"`
-	Num      int    `json:"num" db:"num"`
-	Caption  string `json:"caption" db:"caption"`
-	Credits  string `json:"credits" db:"credits"`
-	UserId   int    `json:"user_id" db:"user_id"`
-	UnitId   int    `json:"unit" db:"unit_id"`
-	ID       int    `json:"id" db:"id"`
+	basepath  string `json:"basepath" db:"basepath"`
+	Num       int    `json:"num" db:"num"`
+	Caption   string `json:"caption" db:"caption"`
+	Credits   string `json:"credits" db:"credits"`
+	UnitId    int    `json:"unit" db:"unit_id"`
+	UserId    int    `json:"user_id" db:"user_id"`
+	ID        int    `json:"id" db:"id"`
+	published bool
 }
 
 type Row struct {
