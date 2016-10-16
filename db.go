@@ -385,23 +385,23 @@ func GetImageById(imageId int) (Image, error) {
 func GetRotateImageById(imageId int) (RotateImage, error) {
 	//TODO: get number of images from DB
 	query := `
-		SELECT units.published, units.user_id, rotate_images.basepath, rotate_images.caption, rotate_images.credits, rotate_images.unit_id FROM units
-		JOIN rotate_images ON rotate_images.unit_id = units.unit_id
+		SELECT units.published, units.user_id, units.unit_id rotate_images.basepath, rotate_images.caption, rotate_images.credits, rotate_images.num FROM units
+		JOIN rotate_images ON rotate_images.rotate_image_id = units.rotate_image_id
 		WHERE rotate_images.rotate_image_id = $1;
 		`
 	row := db.QueryRow(query, imageId)
 	var published bool
-	var userId, unitId int
+	var userId, unitId, num int
 	var path, caption, credits string
 	var nullPath sql.NullString
-	err := row.Scan(&published, &userId, &nullPath, &caption, &credits, &unitId)
+	err := row.Scan(&published, &userId, &unitId, &nullPath, &caption, &credits, &num)
 	if err != nil {
 		return RotateImage{}, err
 	}
 	if nullPath.Valid {
 		path = nullPath.String
 	}
-	return RotateImage{path, 36, caption, credits, unitId, userId, imageId, published}, nil
+	return RotateImage{path, num, caption, credits, unitId, userId, imageId, published}, nil
 }
 
 func InsertImage(image Image) (int, error) {
@@ -415,7 +415,7 @@ func InsertImage(image Image) (int, error) {
 }
 
 func InsertRotateImage(image RotateImage) (int, error) {
-	query := "INSERT INTO rotate_images (caption, credits, num) VALUES ($1, $2, $3) RETURNING image_id;"
+	query := "INSERT INTO rotate_images (caption, credits, num) VALUES ($1, $2, $3) RETURNING rotate_image_id;"
 	var imageId int
 	err := db.QueryRow(query, image.Caption, image.Credits, image.Num).Scan(&imageId)
 	if err != nil {

@@ -89,6 +89,7 @@ var Units = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		units, err := GetPublishedUnits()
 		if err != nil {
 			internalError(w, r, err)
+			return
 		}
 		if err := json.NewEncoder(w).Encode(map[string]interface{}{"units": units}); err != nil {
 			panic(err)
@@ -98,6 +99,7 @@ var Units = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		units, err := GetUnPublishedUnits()
 		if err != nil {
 			internalError(w, r, err)
+			return
 		}
 		if err := json.NewEncoder(w).Encode(map[string]interface{}{"units": units}); err != nil {
 			panic(err)
@@ -381,6 +383,7 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 
 		tokenString, _ := token.SignedString(mySigningKey)
 		if err := sendRegistrationMail(login.Email, conf.AppUrl+"confirm-mail/"+tokenString); err != nil {
+			log.Printf("Error sending mail\n")
 			internalError(w, r, err)
 			return
 		}
@@ -582,7 +585,7 @@ var CreateRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Req
 		notParsable(w, r, err)
 		return
 	}
-	if err := json.Unmarshal(*objmap["rotate-image"], &image); err != nil {
+	if err := json.Unmarshal(*objmap["rotateImage"], &image); err != nil {
 		notParsable(w, r, err)
 		return
 	} else {
@@ -594,7 +597,7 @@ var CreateRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Req
 		}
 		image.ID = imageId
 		w.WriteHeader(http.StatusCreated)
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{"rotate-image": image}); err != nil {
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"rotateImage": image}); err != nil {
 			panic(err)
 		}
 	}

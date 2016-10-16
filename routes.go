@@ -51,13 +51,13 @@ var editorRoutes = Routes{
 	Route{
 		"CreateRotateImage",
 		"POST",
-		"/rotate-images",
+		"/rotateImages",
 		CreateRotateImage,
 	},
 	Route{
 		"UploadRotateImages",
 		"PUT",
-		"/rotate-images/{rotateImageId}",
+		"/rotateImages/{rotateImageId}",
 		UploadRotateImage,
 	},
 }
