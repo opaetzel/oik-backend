@@ -383,9 +383,8 @@ func GetImageById(imageId int) (Image, error) {
 }
 
 func GetRotateImageById(imageId int) (RotateImage, error) {
-	//TODO: get number of images from DB
 	query := `
-		SELECT units.published, units.user_id, units.unit_id rotate_images.basepath, rotate_images.caption, rotate_images.credits, rotate_images.num FROM units
+		SELECT units.published, units.user_id, units.unit_id, rotate_images.basepath, rotate_images.caption, rotate_images.credits, rotate_images.num FROM units
 		JOIN rotate_images ON rotate_images.rotate_image_id = units.rotate_image_id
 		WHERE rotate_images.rotate_image_id = $1;
 		`
@@ -568,6 +567,18 @@ func UserUpdateUser(user User) error {
 		return err
 	}
 	_, err = stmt.Exec(user.Active, user.Username, user.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func SetRotateImagePathAndNum(imageId int, imageDir string, imageCount int) error {
+	stmt, err := db.Prepare("UPDATE rotate_images SET basepath=$1, num=$2 WHERE rotate_image_id=$3")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(imageDir, imageCount, imageId)
 	if err != nil {
 		return err
 	}

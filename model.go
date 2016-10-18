@@ -14,7 +14,7 @@ type Image struct {
 
 type RotateImage struct {
 	basepath  string `json:"basepath" db:"basepath"`
-	Num       int    `json:"num" db:"num"`
+	Num       int    `json:"numImages" db:"num"`
 	Caption   string `json:"caption" db:"caption"`
 	Credits   string `json:"credits" db:"credits"`
 	UnitId    int    `json:"unit" db:"unit_id"`
@@ -47,7 +47,7 @@ type Page struct {
 
 type Unit struct {
 	Title       string `json:"title" db:"title"`
-	UnitImageID int    `json:"rotate-image" db:"rotate_image_id"`
+	UnitImageID int    `json:"rotateImage" db:"rotate_image_id"`
 	PageIds     []int  `json:"pages" db:"pageids"`
 	Published   bool   `json:"published" db:"published"`
 	ColorScheme int    `json:"color_scheme" db:"color_scheme"`

@@ -54,10 +54,16 @@ var editorRoutes = Routes{
 		"/rotateImages",
 		CreateRotateImage,
 	},
+	/*	Route{
+		"UpdateRotateImages",
+		"PUT",
+		"/rotateImages/{rotateImageId}",
+		UpdateRotateImage,
+	},*/
 	Route{
 		"UploadRotateImages",
 		"PUT",
-		"/rotateImages/{rotateImageId}",
+		"/upload-rotate-image/{rotateImageId}",
 		UploadRotateImage,
 	},
 }
@@ -113,6 +119,12 @@ var publicRoutes = Routes{
 		"GET",
 		"/get-image/{imageId}",
 		ImageById,
+	},
+	Route{
+		"GetRotateImageObj",
+		"GET",
+		"/rotateImages/{rotateImageId}",
+		RotateImageById,
 	},
 	Route{
 		"RotateImageByIdAndNumber",

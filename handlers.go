@@ -141,10 +141,7 @@ var UserUpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		notParsable(w, r, err)
 		return
 	}
-	if unit.ID != unitId {
-		notParsable(w, r, err)
-		return
-	}
+	unit.ID = unitId
 	if id, err := getUserId(r); err != nil {
 		notParsable(w, r, err)
 		return
@@ -186,6 +183,36 @@ var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			}
 			w.WriteHeader(http.StatusOK)
 			if err := json.NewEncoder(w).Encode(map[string]interface{}{"page": page}); err != nil {
+				panic(err)
+			}
+		}
+	}
+})
+
+var RotateImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	if imageId, err := strconv.Atoi(vars["rotateImageId"]); err != nil {
+		notParsable(w, r, err)
+		return
+	} else {
+		if image, err := GetRotateImageById(imageId); err != nil {
+			internalError(w, r, err)
+		} else {
+			if !image.published {
+				user, err := getUserFromRequest(r)
+				if err != nil {
+					log.Println(err)
+					unauthorized(w, r)
+					return
+				}
+				if user.ID != image.UserId && !user.isInGroup("admin") {
+					unauthorized(w, r)
+					return
+				}
+			}
+			w.WriteHeader(http.StatusOK)
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{"rotateImage": image}); err != nil {
 				panic(err)
 			}
 		}
@@ -607,13 +634,15 @@ var CreateRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Req
 Awaits an tar.gz as FormFile. Extracts and saves image files from it.
 */
 var UploadRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	log.Println("in UploadRotateImage")
 	userId, err := getUserId(r)
 	if err != nil {
 		notParsable(w, r, err)
 		return
 	}
 	vars := mux.Vars(r)
-	imageId, err := strconv.Atoi(vars["imageId"])
+	log.Println("got vars: ", vars["rotateImageId"])
+	imageId, err := strconv.Atoi(vars["rotateImageId"])
 	if err != nil {
 		notParsable(w, r, err)
 		return
@@ -670,7 +699,7 @@ var UploadRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Req
 			return
 		}
 		extension := "." + strings.ToLower(splitFilename[len(splitFilename)-1])
-		if extension != ".png" || extension != ".jpeg" || extension != ".jpg" {
+		if extension != ".png" && extension != ".jpeg" && extension != ".jpg" {
 			log.Printf("can not accept filename: %s\n", hdr.Name)
 			notAcceptable(w, r)
 			return
@@ -689,8 +718,13 @@ var UploadRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Req
 		}
 		imageCount++
 	}
+	if err := SetRotateImagePathAndNum(image.ID, imageDir, imageCount+1); err != nil {
+		internalError(w, r, err)
+		return
+	}
 	w.WriteHeader(http.StatusCreated)
 })
+
 var RotateImageByIdAndNumber = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	imageId, err := strconv.Atoi(vars["imageId"])
@@ -703,16 +737,24 @@ var RotateImageByIdAndNumber = http.HandlerFunc(func(w http.ResponseWriter, r *h
 		notParsable(w, r, err)
 		return
 	}
-	published, imageFolder, err := GetRotateImagePublishedAndPath(imageId)
+	image, err := GetRotateImageById(imageId)
 	if err != nil {
 		internalError(w, r, err)
 		return
 	}
-	if !published {
-		unauthorized(w, r)
-		return
+	if !image.published {
+		user, err := getUserFromRequest(r)
+		if err != nil {
+			log.Println("could not get user from request")
+			unauthorized(w, r)
+		}
+		if user.ID != image.UserId && !stringInSlice("admin", user.Groups) {
+			log.Println("rotateImage.userId != userid and user is not admin")
+			unauthorized(w, r)
+			return
+		}
 	}
-	sendRotateImage(w, r, imageFolder, number)
+	sendRotateImage(w, r, image.basepath, number)
 })
 
 var ImageJSONById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
