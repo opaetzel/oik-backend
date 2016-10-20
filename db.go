@@ -228,7 +228,10 @@ func UpdatePage(page Page) error {
 	if err != nil {
 		return err
 	}
-	stmt, err = tx.Prepare("UPDATE rows SET left_markdown=$1, right_markdown=$2, left_has_image=$3, right_has_image=$4 leftimage=$5, rightimage=$6, left_is_argument=$7, right_is_argument=$8, WHERE row_id=$9;")
+	stmt, err = tx.Prepare("UPDATE rows SET left_markdown=$1, right_markdown=$2, left_has_image=$3, right_has_image=$4, leftimage=$5, rightimage=$6, left_is_argument=$7, right_is_argument=$8 WHERE row_id=$9;")
+	if err != nil {
+		return err
+	}
 	for _, row := range page.Rows {
 		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, row.LeftHasImage, row.RightHasImage, row.LeftImage, row.RightImage, row.LeftIsArgument, row.RightIsArgument, row.ID)
 		if err != nil {
