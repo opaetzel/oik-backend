@@ -310,11 +310,11 @@ func InsertUnit(unit Unit) (int, error) {
 }
 
 func UpdateUnitAdmin(unit Unit) error {
-	stmt, err := db.Prepare("UPDATE units SET unit_title=$1, published=$2, rotate_image_id=$3, color_scheme=$4;")
+	stmt, err := db.Prepare("UPDATE units SET unit_title=$1, published=$2, rotate_image_id=$3, color_scheme=$4 WHERE unit_id=$5;")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(unit.Title, unit.Published, unit.UnitImageID, unit.ColorScheme)
+	_, err = stmt.Exec(unit.Title, unit.Published, unit.UnitImageID, unit.ColorScheme, unit.ID)
 	if err != nil {
 		return err
 	}
@@ -322,11 +322,11 @@ func UpdateUnitAdmin(unit Unit) error {
 }
 
 func UpdateUnitUser(unit Unit) error {
-	stmt, err := db.Prepare("UPDATE units SET unit_title=$1, rotate_image_id=$2, color_scheme=$3;")
+	stmt, err := db.Prepare("UPDATE units SET unit_title=$1, rotate_image_id=$2, color_scheme=$3 WHERE unit_id=$4;")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(unit.Title, unit.UnitImageID, unit.ColorScheme)
+	_, err = stmt.Exec(unit.Title, unit.UnitImageID, unit.ColorScheme, unit.ID)
 	if err != nil {
 		return err
 	}

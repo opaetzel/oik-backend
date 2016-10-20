@@ -22,7 +22,7 @@ var editorRoutes = Routes{
 		"UserUpdateUnit",
 		"PUT",
 		"/units/{unitId}",
-		UserUpdateUnit,
+		UpdateUnit,
 	},
 	Route{
 		"PageCreate",

@@ -119,7 +119,7 @@ var PublishedUnits = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 	}
 })
 
-var UserUpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var UpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	body, err := readBody(r)
 	if err != nil {
@@ -142,10 +142,19 @@ var UserUpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	unit.ID = unitId
-	if id, err := getUserId(r); err != nil {
+	if user, err := getUserFromRequest(r); err != nil {
 		notParsable(w, r, err)
 		return
-	} else if id == unit.UserId {
+	} else if stringInSlice("admin", user.Groups) {
+		err := UpdateUnitAdmin(unit)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		if _, err := w.Write([]byte("{}")); err != nil {
+			panic(err)
+		}
+	} else if user.ID == unit.UserId {
 		err := UpdateUnitUser(unit)
 		if err != nil {
 			internalError(w, r, err)
