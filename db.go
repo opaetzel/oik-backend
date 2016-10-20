@@ -556,7 +556,36 @@ func AdminUpdateUser(user User) error {
 	if err != nil {
 		return err
 	}
-	//TODO update groups
+	err = UpdateGroups(user)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpdateGroups(user User) error {
+	//first delete all old groups for user
+	stmt, err := db.Prepare("DELETE FROM user_groups WHERE user_id=$1;")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(user.ID)
+	//now add groups
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	stmt, err = tx.Prepare("INSERT INTO user_groups (user_id, group_id) VALUES ($1, (SELECT group_id FROM groups WHERE group_name=$2));")
+	for _, group := range user.Groups {
+		_, err := stmt.Exec(user.ID, group)
+		if err != nil {
+			return err
+		}
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

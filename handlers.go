@@ -422,6 +422,12 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 })
 
 var UpdateUser = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userId, err := strconv.Atoi(vars["userId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
 	var user User
 	body, err := readBody(r)
 	var objmap map[string]*json.RawMessage
@@ -433,6 +439,7 @@ var UpdateUser = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		notParsable(w, r, err)
 		return
 	}
+	user.ID = userId
 	claims, err := GetJWTClaims(r)
 	if err != nil {
 		unauthorized(w, r)
@@ -446,7 +453,10 @@ var UpdateUser = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	claimId := int(claimIdF)
 	if user.ID == claimId {
 		UserUpdateUser(user)
-		//TODO: send response with updated user
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"user": user}); err != nil {
+			internalError(w, r, err)
+		}
 	} else {
 		groups, err := GetClaimGroups(claims)
 		if err != nil {
@@ -455,7 +465,10 @@ var UpdateUser = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		}
 		if stringInSlice("admin", groups) {
 			AdminUpdateUser(user)
-			//TODO: send response with updated user
+			w.WriteHeader(http.StatusOK)
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{"user": user}); err != nil {
+				internalError(w, r, err)
+			}
 		} else {
 			unauthorized(w, r)
 			return
