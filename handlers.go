@@ -394,6 +394,17 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 		notParsable(w, r, err)
 		return
 	}
+	if userInDb, err := IsUsernameInDb(login.Username); err != nil {
+		internalError(w, r, err)
+		return
+	} else if userInDb {
+		w.WriteHeader(http.StatusConflict)
+		jsonError := jsonErr{http.StatusConflict, "Username already exists"}
+		if err := json.NewEncoder(w).Encode(jsonError); err != nil {
+			panic(err)
+		}
+		return
+	}
 	salt, pwhash, err := HashNewPW(login.Password)
 	if err != nil {
 		internalError(w, r, err)

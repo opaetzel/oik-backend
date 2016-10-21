@@ -616,3 +616,13 @@ func SetRotateImagePathAndNum(imageId int, imageDir string, imageCount int) erro
 	}
 	return nil
 }
+
+func IsUsernameInDb(username string) (bool, error) {
+	var count int
+	row := db.QueryRow("SELECT COUNT(*) FROM users WHERE username=$1", username)
+	err := row.Scan(&count)
+	if err != nil {
+		return true, err
+	}
+	return count > 0, nil
+}
