@@ -737,7 +737,7 @@ var UploadRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Req
 			notAcceptable(w, r)
 			return
 		}
-		imagePath := filepath.Join(imageDir, strconv.Itoa(imageCount)+extension)
+		imagePath := filepath.Join(imageDir, fmt.Sprintf("%04d", imageCount)+extension)
 		outFile, err := os.Create(imagePath)
 		if err != nil {
 			internalError(w, r, err)
@@ -751,7 +751,7 @@ var UploadRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Req
 		}
 		imageCount++
 	}
-	if err := SetRotateImagePathAndNum(image.ID, imageDir, imageCount+1); err != nil {
+	if err := SetRotateImagePathAndNum(image.ID, imageDir, imageCount); err != nil {
 		internalError(w, r, err)
 		return
 	}
