@@ -605,7 +605,7 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	extension := "." + strings.ToLower(splitFilename[len(splitFilename)-1])
-	if extension != ".png" || extension != ".jpeg" || extension != ".jpg" {
+	if extension != ".png" && extension != ".jpeg" && extension != ".jpg" {
 		log.Printf("can not accept filename: %s\n", filename)
 		notAcceptable(w, r)
 		return

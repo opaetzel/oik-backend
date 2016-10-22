@@ -107,7 +107,6 @@ func GetClaimGroups(claims jwt.MapClaims) ([]string, error) {
 func (rr *RequireRole) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//check if is in role
 	user := context.Get(r, "user")
-	log.Println("user:", user)
 	claims, ok := user.(*jwt.Token).Claims.(jwt.MapClaims)
 	if ok {
 		groups, err := GetClaimGroups(claims)
