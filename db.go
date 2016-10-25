@@ -215,34 +215,39 @@ func GetPageOwner(pageId int) (int, error) {
 	return userId, nil
 }
 
-func UpdatePage(page Page) error {
+func UpdatePage(page Page) (Page, error) {
 	stmt, err := db.Prepare("UPDATE pages SET page_title=$1, page_type=$2 WHERE page_id=$3;")
 	if err != nil {
-		return err
+		return Page{}, err
 	}
 	_, err = stmt.Exec(page.Title, page.PageType, page.ID)
 	if err != nil {
-		return err
+		return Page{}, err
 	}
-	tx, err := db.Begin()
+	stmt, err = db.Prepare("UPDATE rows SET left_markdown=$1, right_markdown=$2, left_has_image=$3, right_has_image=$4, leftimage=$5, rightimage=$6, left_is_argument=$7, right_is_argument=$8 WHERE row_id=$9 RETURNING row_id;")
 	if err != nil {
-		return err
+		return Page{}, err
 	}
-	stmt, err = tx.Prepare("UPDATE rows SET left_markdown=$1, right_markdown=$2, left_has_image=$3, right_has_image=$4, leftimage=$5, rightimage=$6, left_is_argument=$7, right_is_argument=$8 WHERE row_id=$9;")
+	insStmt, err := db.Prepare("INSERT INTO rows (left_markdown, right_markdown, left_has_image, right_has_image, leftimage, rightimage, left_is_argument, right_is_argument, page_id) VALUES ($1, $2, $3, $4, $5 ,$6, $7, $8, $9) RETURNING row_id;")
 	if err != nil {
-		return err
+		return Page{}, err
 	}
-	for _, row := range page.Rows {
-		_, err := stmt.Exec(row.LeftMarkdown, row.RightMarkdown, row.LeftHasImage, row.RightHasImage, row.LeftImage, row.RightImage, row.LeftIsArgument, row.RightIsArgument, row.ID)
+	for idx, row := range page.Rows {
+		dbRows, err := stmt.Query(row.LeftMarkdown, row.RightMarkdown, row.LeftHasImage, row.RightHasImage, row.LeftImage, row.RightImage, row.LeftIsArgument, row.RightIsArgument, row.ID)
 		if err != nil {
-			return err
+			return Page{}, err
+		}
+		if !dbRows.Next() {
+			var rowId int
+			dbRow := insStmt.QueryRow(row.LeftMarkdown, row.RightMarkdown, row.LeftHasImage, row.RightHasImage, row.LeftImage, row.RightImage, row.LeftIsArgument, row.RightIsArgument, page.ID)
+			dbRow.Scan(rowId)
+			if err != nil {
+				return Page{}, err
+			}
+			page.Rows[idx].ID = rowId
 		}
 	}
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
-	return nil
+	return page, nil
 }
 
 func parsePage(row *sql.Row) (Page, error) {
@@ -278,7 +283,7 @@ func GetPublicPageById(id int) (Page, error) {
 */
 func GetPageById(id int) (Page, error) {
 	query := `
-		SELECT units.published, units.user_id, pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.*) AS rows FROM pages 
+		SELECT units.published, units.user_id, pages.page_title, pages.page_id, pages.unit_id, pages.page_type, json_agg(rows.* ORDER BY rows.row_id) AS rows FROM pages 
 		LEFT JOIN rows ON rows.page_id = pages.page_id
 		RIGHT JOIN units ON units.unit_id = pages.unit_id
 		WHERE pages.page_id=$1

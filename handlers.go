@@ -295,12 +295,13 @@ var UserUpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 			notParsable(w, r, err)
 			return
 		}
-		err = UpdatePage(page)
+		page.ID = pageId
+		page, err = UpdatePage(page)
 		if err != nil {
 			internalError(w, r, err)
 		} else {
 			w.WriteHeader(http.StatusOK)
-			if _, err := w.Write([]byte("{}")); err != nil {
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{"page": page}); err != nil {
 				panic(err)
 			}
 		}
