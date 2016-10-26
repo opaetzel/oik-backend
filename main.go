@@ -11,6 +11,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/gorilla/handlers"
+	"github.com/natefinch/lumberjack"
 )
 
 type SMTPConfig struct {
@@ -33,6 +34,7 @@ type Config struct {
 	ImageStorage string
 	StaticFolder string
 	AppUrl       string
+	LogFile      string
 	MailConfig   SMTPConfig
 }
 
@@ -47,6 +49,12 @@ func main() {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
+	log.SetOutput(&lumberjack.Logger{
+		Filename:   conf.LogFile,
+		MaxSize:    10, // megabytes
+		MaxBackups: 10,
+		MaxAge:     28, //days
+	})
 
 	initDB(conf.DBName, conf.DBUser, conf.DBPassword)
 
