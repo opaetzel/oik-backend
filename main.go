@@ -49,13 +49,13 @@ func main() {
 		fmt.Println(err)
 		os.Exit(-1)
 	}
-	log.SetOutput(&lumberjack.Logger{
+	lJack := lumberjack.Logger{
 		Filename:   conf.LogFile,
 		MaxSize:    10, // megabytes
 		MaxBackups: 10,
 		MaxAge:     28, //days
-	})
-
+	}
+	log.SetOutput(&lJack)
 	initDB(conf.DBName, conf.DBUser, conf.DBPassword)
 
 	router := NewRouter()
@@ -75,6 +75,6 @@ func main() {
 		}
 		log.Fatal(http.ListenAndServe(":"+strconv.Itoa(conf.HTTPPort), http.HandlerFunc(redirect)))
 	} else {
-		log.Fatal(http.ListenAndServe(":"+strconv.Itoa(conf.HTTPPort), nil))
+		log.Fatal(http.ListenAndServe(":"+strconv.Itoa(conf.HTTPPort), handlers.LoggingHandler(&lJack, router)))
 	}
 }
