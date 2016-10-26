@@ -75,6 +75,6 @@ func main() {
 		}
 		log.Fatal(http.ListenAndServe(":"+strconv.Itoa(conf.HTTPPort), http.HandlerFunc(redirect)))
 	} else {
-		log.Fatal(http.ListenAndServe(":"+strconv.Itoa(conf.HTTPPort), handlers.CompressHandler(handlers.LoggingHandler(&lJack, router))))
+		log.Fatal(http.ListenAndServe(":"+strconv.Itoa(conf.HTTPPort), handlers.LoggingHandler(&lJack, router)))
 	}
 }
