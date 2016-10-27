@@ -640,11 +640,14 @@ func IsUsernameInDb(username string) (bool, error) {
 func GetRowOwnerId(rowId int) (int, error) {
 	var userId int
 	err := db.QueryRow("SELECT users.user_id FROM rows LEFT JOIN pages ON rows.page_id=pages.page_id LEFT JOIN units ON pages.unit_id=units.unit_id LEFT JOIN users ON units.user_id=users.user_id WHERE row_id=$1", rowId).Scan(&userId)
-	return userId, err
+	if err != nil {
+		return 0, err
+	}
+	return userId, nil
 }
 
 func RowDelete(rowId int) error {
-	stmt, err := db.Prepare("DELETE FROM rows WHERE id=$1")
+	stmt, err := db.Prepare("DELETE FROM rows WHERE row_id=$1")
 	if err != nil {
 		return err
 	}
@@ -652,5 +655,5 @@ func RowDelete(rowId int) error {
 	if err != nil {
 		return err
 	}
-	return err
+	return nil
 }

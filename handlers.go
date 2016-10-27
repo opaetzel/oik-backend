@@ -883,6 +883,10 @@ var DeleteRow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rowOwnerId, err := GetRowOwnerId(rowId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
 	if rowOwnerId != user.ID {
 		unauthorized(w, r)
 		return
@@ -893,7 +897,4 @@ var DeleteRow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
-	if _, err := w.Write([]byte("{}")); err != nil {
-		panic(err)
-	}
 })
