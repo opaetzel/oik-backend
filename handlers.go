@@ -869,3 +869,31 @@ var AllUsers = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 })
+
+var DeleteRow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromRequest(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	vars := mux.Vars(r)
+	rowId, err := strconv.Atoi(vars["rowId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	rowOwnerId, err := GetRowOwnerId(rowId)
+	if rowOwnerId != user.ID {
+		unauthorized(w, r)
+		return
+	}
+	err = RowDelete(rowId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+	if _, err := w.Write([]byte("{}")); err != nil {
+		panic(err)
+	}
+})

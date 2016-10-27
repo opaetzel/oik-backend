@@ -37,6 +37,12 @@ var editorRoutes = Routes{
 		UserUpdatePage,
 	},
 	Route{
+		"DeleteRow",
+		"DELETE",
+		"/rows/{rowId}",
+		DeleteRow,
+	},
+	Route{
 		"CreateImage",
 		"POST",
 		"/images",

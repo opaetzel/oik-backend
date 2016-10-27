@@ -26,13 +26,14 @@ type RotateImage struct {
 type Row struct {
 	LeftMarkdown    string `json:"left_markdown" db:"left_markdown"`
 	RightMarkdown   string `json:"right_markdown" db:"right_markdown"`
-	LeftHasImage    bool   `json:"left_has_image"`
-	RightHasImage   bool   `json:"right_has_image"`
+	LeftHasImage    bool   `json:"left_has_image" db:"left_has_image"`
+	RightHasImage   bool   `json:"right_has_image" db:"right_has_image"`
 	LeftImage       int    `json:"leftImage,omitempty" db:"leftImage"`
 	RightImage      int    `json:"rightImage,omitempty" db:"rightImage"`
-	LeftIsArgument  bool   `json:"left_is_argument"`
-	RightIsArgument bool   `json:"right_is_argument"`
+	LeftIsArgument  bool   `json:"left_is_argument" db:"left_is_argument"`
+	RightIsArgument bool   `json:"right_is_argument" db:"right_is_argument"`
 	ID              int    `json:"id" db:"row_id"`
+	UserId          int    `json:"-" db:"user_id"`
 }
 
 type Page struct {
