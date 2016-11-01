@@ -52,7 +52,7 @@ var editorRoutes = Routes{
 		"UploadImage",
 		"PUT",
 		"/images/{imageId}",
-		UploadImage,
+		UploadOrUpdateImage,
 	},
 	Route{
 		"CreateRotateImage",

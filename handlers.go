@@ -556,7 +556,7 @@ var CreateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	}
 })
 
-var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var UploadOrUpdateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	userId, err := getUserId(r)
 	if err != nil {
 		notParsable(w, r, err)
@@ -594,7 +594,33 @@ var UploadImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	r.ParseMultipartForm(32 << 20)
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		notParsable(w, r, err)
+		//no formfile. Try to update image.
+		log.Println("does not seem to be a formfile")
+		var updateImage Image
+		body, err := readBody(r)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		var objmap map[string]*json.RawMessage
+		if err := json.Unmarshal(body, &objmap); err != nil {
+			notParsable(w, r, err)
+			return
+		}
+		if err := json.Unmarshal(*objmap["image"], &updateImage); err != nil {
+			notParsable(w, r, err)
+			return
+		}
+		updateImage.ID = imageId
+		err = UpdateImageUser(updateImage)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"image": updateImage}); err != nil {
+			panic(err)
+		}
 		return
 	}
 	defer file.Close()

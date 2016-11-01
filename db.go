@@ -345,6 +345,18 @@ func UpdateUnitUser(unit Unit) error {
 	return nil
 }
 
+func UpdateImageUser(image Image) error {
+	stmt, err := db.Prepare("UPDATE images SET caption=$1, credits=$2 WHERE image_id=$3;")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(image.Caption, image.Credits, image.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func UpdateImagePath(imageId int, imagePath string) error {
 	stmt, err := db.Prepare("UPDATE images SET path=$1 WHERE image_id=$2")
 	if err != nil {
