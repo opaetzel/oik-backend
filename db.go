@@ -44,6 +44,13 @@ CREATE TABLE IF NOT EXISTS rows (
 	row_id SERIAL PRIMARY KEY
 );
 
+CREATE TABLE IF NOT EXISTS cites (
+	abbrev varchar(255),
+	cite_text text,
+	unit_id integer,
+	cite_id SERIAL PRIMARY KEY
+);
+
 CREATE TABLE IF NOT EXISTS rotate_images ( 
 	basepath varchar(255),
 	num integer,
@@ -99,9 +106,9 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 		var user_id int
 		var color_scheme int
 		var unit_id int
-		var pages_arr, images_arr string
+		var pages_arr, images_arr, cites_arr string
 
-		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr)
+		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr, &cites_arr)
 		if err != nil {
 			return nil, err
 		}
@@ -123,6 +130,15 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 				return nil, err
 			}
 		}
+		var cites []int
+		if cites_arr == emptyArr {
+			cites = make([]int, 0)
+		} else {
+			err = json.Unmarshal([]byte(cites_arr), &cites)
+			if err != nil {
+				return nil, err
+			}
+		}
 		units = append(units, Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, unit_id})
 	}
 	return units, nil
@@ -135,9 +151,9 @@ func parseUnit(row *sql.Row) (Unit, error) {
 	var user_id int
 	var color_scheme int
 	var unit_id int
-	var pages_arr, images_arr string
+	var pages_arr, images_arr, cites_arr string
 
-	err := row.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr)
+	err := row.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr, &cites_arr)
 	if err != nil {
 		return Unit{}, err
 	}
@@ -159,16 +175,25 @@ func parseUnit(row *sql.Row) (Unit, error) {
 			return Unit{}, err
 		}
 	}
+	var cites []int
+	if cites_arr == emptyArr {
+		cites = make([]int, 0)
+	} else {
+		err = json.Unmarshal([]byte(cites_arr), &cites)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, unit_id}, nil
 }
 
 func GetUnit(unitId int) (Unit, error) {
-	row := db.QueryRow("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id) AS images_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id WHERE units.unit_id=$1 GROUP BY units.unit_id;", unitId)
+	row := db.QueryRow("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id) AS images_arr, json_agg(DISTINCT cites.cite_id) FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id LEFT JOIN cites ON cites.unit_id=units.unit_id WHERE units.unit_id=$1 GROUP BY units.unit_id;", unitId)
 	return parseUnit(row)
 }
 
 func GetAllUnits() ([]Unit, error) {
-	rows, err := db.Query("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id) AS images_arr FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id GROUP BY units.unit_id;")
+	rows, err := db.Query("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id) AS images_arr, json_agg(DISTINCT cites.cite_id FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id LEFT JOIN cites ON cites.unit_id=units.unit_id GROUP BY units.unit_id;")
 	defer rows.Close()
 	if err != nil {
 		return nil, err
@@ -664,6 +689,40 @@ func RowDelete(rowId int) error {
 		return err
 	}
 	_, err = stmt.Exec(rowId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func InsertCite(cite Cite) (int, error) {
+	query := "INSERT INTO cites (abbrev, cite_text, unit_id) VALUES ($1, $2, $3) RETURNING cite_id;"
+	var userId int
+	err := db.QueryRow(cite.Abbrev, cite.Text, cite.UnitId).Scan(&userId)
+	if err != nil {
+		return -1, err
+	}
+	return userId, nil
+}
+
+func DeleteCite(cite Cite) error {
+	stmt, err := db.Prepare("DELETE FROM cites WHERE cite_id=$1;")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(cite.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func UpdateCite(cite Cite) error {
+	stmt, err := db.Prepare("UPDATE cites SET abbrev=$1, cite_text=$2 WHERE cite_id=$3;")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(cite.Abbrev, cite.Text, cite.ID)
 	if err != nil {
 		return err
 	}

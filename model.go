@@ -54,7 +54,15 @@ type Unit struct {
 	ColorScheme int    `json:"color_scheme" db:"color_scheme"`
 	UserId      int    `json:"user" db:"userid"`
 	ImageIds    []int  `json:"images" db:"image_ids"`
+	CiteIds     []int  `json:"cites" db:"cite_ids"`
 	ID          int    `json:"id" db:"id"`
+}
+
+type Cite struct {
+	Abbrev string `json:"abbrev"`
+	Text   string `json:"text"`
+	UnitID int    `json:"unit" db:"unit_id"`
+	ID     int    `json:"id"`
 }
 
 func (r *Image) UnmarshalJSON(data []byte) error {
