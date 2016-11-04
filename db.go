@@ -139,7 +139,7 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 				return nil, err
 			}
 		}
-		units = append(units, Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, unit_id})
+		units = append(units, Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, cites, unit_id})
 	}
 	return units, nil
 }
@@ -181,10 +181,10 @@ func parseUnit(row *sql.Row) (Unit, error) {
 	} else {
 		err = json.Unmarshal([]byte(cites_arr), &cites)
 		if err != nil {
-			return nil, err
+			return Unit{}, err
 		}
 	}
-	return Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, unit_id}, nil
+	return Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, cites, unit_id}, nil
 }
 
 func GetUnit(unitId int) (Unit, error) {
@@ -698,7 +698,7 @@ func RowDelete(rowId int) error {
 func InsertCite(cite Cite) (int, error) {
 	query := "INSERT INTO cites (abbrev, cite_text, unit_id) VALUES ($1, $2, $3) RETURNING cite_id;"
 	var userId int
-	err := db.QueryRow(cite.Abbrev, cite.Text, cite.UnitId).Scan(&userId)
+	err := db.QueryRow(query, cite.Abbrev, cite.Text, cite.UnitID).Scan(&userId)
 	if err != nil {
 		return -1, err
 	}
