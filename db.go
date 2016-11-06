@@ -269,12 +269,14 @@ func UpdatePage(page Page) (Page, error) {
 		if !dbRows.Next() {
 			var rowId int
 			dbRow := insStmt.QueryRow(row.LeftMarkdown, row.RightMarkdown, row.LeftHasImage, row.RightHasImage, row.LeftImage, row.RightImage, row.LeftIsArgument, row.RightIsArgument, page.ID)
-			dbRow.Scan(rowId)
+			dbRow.Scan(&rowId)
 			if err != nil {
 				return Page{}, err
 			}
+			log.Println("got new id for row", rowId)
 			page.Rows[idx].ID = rowId
 		}
+		dbRows.Close()
 	}
 	return page, nil
 }
