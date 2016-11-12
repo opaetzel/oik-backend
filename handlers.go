@@ -8,6 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	goimg "image"
+	"image/jpeg"
+	"image/png"
 	"io"
 	"log"
 	"net/http"
@@ -19,6 +22,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
+	"github.com/nfnt/resize"
 )
 
 /*
@@ -579,18 +583,6 @@ var UploadOrUpdateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.R
 		unauthorized(w, r)
 		return
 	}
-	/*
-		contentType := r.Header.Get("Content-Type")
-		if contentType == "" || (contentType != "image/jpeg" && contentType != "image/png") {
-			log.Println(contentType)
-			notAcceptable(w, r)
-			return
-		}
-		extension := ".jpg"
-		if contentType == "image/png" {
-			extension = ".png"
-		}
-	*/
 	r.ParseMultipartForm(32 << 20)
 	file, header, err := r.FormFile("file")
 	if err != nil {
@@ -650,14 +642,46 @@ var UploadOrUpdateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.R
 	if err != nil {
 		internalError(w, r, err)
 		return
-	} else {
-		err := UpdateImagePath(imageId, imagePath)
+	}
+	idx := strings.LastIndex(imagePath, ".")
+	smallPath := imagePath[0:idx] + "_small" + imagePath[idx:len(imagePath)]
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	var img goimg.Image
+	if strings.Contains(extension, "jpg") || strings.Contains(extension, "jpeg") {
+		img, err = jpeg.Decode(file)
 		if err != nil {
 			internalError(w, r, err)
 			return
 		}
-		w.WriteHeader(http.StatusCreated)
+	} else if strings.Contains(extension, "png") {
+		img, err = png.Decode(file)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
 	}
+
+	m := resize.Thumbnail(550, 330, img, resize.Lanczos3)
+
+	smallOutFile, err := os.Create(smallPath)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	defer smallOutFile.Close()
+	jpeg.Encode(smallOutFile, m, nil)
+
+	err = UpdateImagePath(imageId, imagePath)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+
 })
 
 var CreateRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -829,7 +853,6 @@ var ImageJSONById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 		internalError(w, r, err)
 		return
 	}
-	//TODO: In frontend: send xhr with token on un-published images
 	if !image.published {
 		user, err := getUserFromRequest(r)
 		if err != nil {
@@ -850,6 +873,11 @@ var ImageJSONById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 
 var ImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
+	sendLargeIm := false
+	sizeStr := r.URL.Query().Get("size")
+	if sizeStr == "full" {
+		sendLargeIm = true
+	}
 	imageId, err := strconv.Atoi(vars["imageId"])
 	if err != nil {
 		notParsable(w, r, err)
@@ -872,7 +900,13 @@ var ImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	sendImage(w, r, image.path)
+	if sendLargeIm {
+		sendImage(w, r, image.path)
+	} else {
+		idx := strings.LastIndex(image.path, ".")
+		smallPath := image.path[0:idx] + "_small" + image.path[idx:len(image.path)]
+		sendImage(w, r, smallPath)
+	}
 })
 
 var AllUsers = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
