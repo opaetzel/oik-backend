@@ -244,7 +244,7 @@ func GetPageOwner(pageId int) (int, error) {
 	return userId, nil
 }
 
-func UpdatePage(page Page) (Page, error) {
+func DbUpdatePage(page Page) (Page, error) {
 	stmt, err := db.Prepare("UPDATE pages SET page_title=$1, page_type=$2 WHERE page_id=$3;")
 	if err != nil {
 		return Page{}, err

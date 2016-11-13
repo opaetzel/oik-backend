@@ -34,7 +34,7 @@ var editorRoutes = Routes{
 		"PageUpdate",
 		"PUT",
 		"/pages/{pageId}",
-		UserUpdatePage,
+		UpdatePage,
 	},
 	Route{
 		"DeleteRow",

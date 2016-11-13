@@ -261,7 +261,7 @@ var PageCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}
 })
 
-var UserUpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+var UpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	vars := mux.Vars(r)
 	pageId, err := strconv.Atoi(vars["pageId"])
@@ -274,12 +274,12 @@ var UserUpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 		internalError(w, r, err)
 		return
 	}
-	id, err := getUserId(r)
+	user, err := getUserFromRequest(r)
 	if err != nil {
 		notParsable(w, r, err)
 		return
 	} else {
-		if dbUserId != id {
+		if dbUserId != user.ID && !user.isInGroup("admin") {
 			unauthorized(w, r)
 			return
 		}
@@ -300,7 +300,7 @@ var UserUpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reques
 			return
 		}
 		page.ID = pageId
-		page, err = UpdatePage(page)
+		page, err = DbUpdatePage(page)
 		if err != nil {
 			internalError(w, r, err)
 		} else {
