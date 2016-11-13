@@ -149,7 +149,7 @@ var UpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	if user, err := getUserFromRequest(r); err != nil {
 		notParsable(w, r, err)
 		return
-	} else if stringInSlice("admin", user.Groups) {
+	} else if user.isInGroup("admin") {
 		err := UpdateUnitAdmin(unit)
 		if err != nil {
 			internalError(w, r, err)
