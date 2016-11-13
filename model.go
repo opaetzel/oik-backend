@@ -55,6 +55,7 @@ type Unit struct {
 	UserId      int    `json:"user" db:"userid"`
 	ImageIds    []int  `json:"images" db:"image_ids"`
 	CiteIds     []int  `json:"cites" db:"cite_ids"`
+	FrontImage  int    `json:"front_image" db:"front_image"`
 	ID          int    `json:"id" db:"id"`
 }
 

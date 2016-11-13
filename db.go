@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS units (
 	rotate_image_id integer,
 	user_id integer,
 	color_scheme integer,
-	unit_id SERIAL PRIMARY KEY
+	unit_id SERIAL PRIMARY KEY,
+	front_image integer
 );
 
 CREATE TABLE IF NOT EXISTS pages (
@@ -105,10 +106,11 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 		var rotate_image_id int
 		var user_id int
 		var color_scheme int
+		var front_image int
 		var unit_id int
 		var pages_arr, images_arr, cites_arr string
 
-		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr, &cites_arr)
+		err := rows.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &front_image, &pages_arr, &images_arr, &cites_arr)
 		if err != nil {
 			return nil, err
 		}
@@ -139,7 +141,7 @@ func parseUnits(rows *sql.Rows) ([]Unit, error) {
 				return nil, err
 			}
 		}
-		units = append(units, Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, cites, unit_id})
+		units = append(units, Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, cites, front_image, unit_id})
 	}
 	return units, nil
 }
@@ -150,10 +152,11 @@ func parseUnit(row *sql.Row) (Unit, error) {
 	var rotate_image_id int
 	var user_id int
 	var color_scheme int
+	var front_image int
 	var unit_id int
 	var pages_arr, images_arr, cites_arr string
 
-	err := row.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &pages_arr, &images_arr, &cites_arr)
+	err := row.Scan(&unit_title, &published, &rotate_image_id, &user_id, &color_scheme, &unit_id, &front_image, &pages_arr, &images_arr, &cites_arr)
 	if err != nil {
 		return Unit{}, err
 	}
@@ -184,7 +187,7 @@ func parseUnit(row *sql.Row) (Unit, error) {
 			return Unit{}, err
 		}
 	}
-	return Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, cites, unit_id}, nil
+	return Unit{unit_title, rotate_image_id, pages, published, color_scheme, user_id, images, cites, front_image, unit_id}, nil
 }
 
 func GetUnit(unitId int) (Unit, error) {
@@ -339,7 +342,7 @@ func GetUserPageById(pageId, userId int) (Page, error) {
 */
 func InsertUnit(unit Unit) (int, error) {
 	log.Println(unit.Title)
-	row := db.QueryRow("INSERT INTO units (unit_title, published, rotate_image_id, user_id, color_scheme) VALUES ($1, $2, $3, $4, $5) RETURNING units.unit_id", unit.Title, unit.Published, unit.UnitImageID, unit.UserId, unit.ColorScheme)
+	row := db.QueryRow("INSERT INTO units (unit_title, published, rotate_image_id, user_id, color_scheme, front_image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING units.unit_id", unit.Title, unit.Published, unit.UnitImageID, unit.UserId, unit.ColorScheme, unit.FrontImage)
 	var id int
 	err := row.Scan(&id)
 	if err != nil {
@@ -349,11 +352,11 @@ func InsertUnit(unit Unit) (int, error) {
 }
 
 func UpdateUnitAdmin(unit Unit) error {
-	stmt, err := db.Prepare("UPDATE units SET unit_title=$1, published=$2, rotate_image_id=$3, color_scheme=$4 WHERE unit_id=$5;")
+	stmt, err := db.Prepare("UPDATE units SET unit_title=$1, published=$2, rotate_image_id=$3, color_scheme=$4, front_image=$5 WHERE unit_id=$6;")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(unit.Title, unit.Published, unit.UnitImageID, unit.ColorScheme, unit.ID)
+	_, err = stmt.Exec(unit.Title, unit.Published, unit.UnitImageID, unit.ColorScheme, unit.FrontImage, unit.ID)
 	if err != nil {
 		return err
 	}
@@ -361,7 +364,7 @@ func UpdateUnitAdmin(unit Unit) error {
 }
 
 func UpdateUnitUser(unit Unit) error {
-	stmt, err := db.Prepare("UPDATE units SET unit_title=$1, rotate_image_id=$2, color_scheme=$3 WHERE unit_id=$4;")
+	stmt, err := db.Prepare("UPDATE units SET unit_title=$1, rotate_image_id=$2, color_scheme=$3, front_image=$4 WHERE unit_id=$5;")
 	if err != nil {
 		return err
 	}
