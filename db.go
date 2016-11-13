@@ -212,7 +212,7 @@ defer rows.Close()
 }
 */
 func GetUnPublishedUnits() ([]Unit, error) {
-	rows, err := db.Query("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id) FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id WHERE units.published=false GROUP BY units.unit_id;")
+	rows, err := db.Query("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id), json_agg(DISTINCT cites.cite_id)  FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id LEFT JOIN cites ON cites.unit_id=units.unit_id WHERE units.published=false GROUP BY units.unit_id;")
 	defer rows.Close()
 	if err != nil {
 		return nil, err
@@ -221,7 +221,7 @@ func GetUnPublishedUnits() ([]Unit, error) {
 }
 
 func GetPublishedUnits() ([]Unit, error) {
-	rows, err := db.Query("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id) FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id WHERE units.published=true GROUP BY units.unit_id;")
+	rows, err := db.Query("SELECT units.*, json_agg(DISTINCT pages.page_id) AS pages_arr, json_agg(DISTINCT images.image_id), json_agg(DISTINCT cites.cite_id)  FROM units LEFT OUTER JOIN pages ON units.unit_id = pages.unit_id LEFT OUTER JOIN images ON units.unit_id=images.unit_id LEFT JOIN cites ON cites.unit_id=units.unit_id WHERE units.published=true GROUP BY units.unit_id;")
 	defer rows.Close()
 	if err != nil {
 		return nil, err
