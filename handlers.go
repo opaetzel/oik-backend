@@ -58,7 +58,7 @@ var UnitById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				unauthorized(w, r)
 				return
 			}
-			if user.ID != unit.UserId && !user.isInGroup("admin") {
+			if user.ID != unit.UserId && !user.isInGroup("admin") && !user.isInGroup("editor") {
 				unauthorized(w, r)
 				return
 			}
@@ -204,7 +204,7 @@ var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					unauthorized(w, r)
 					return
 				}
-				if user.ID != page.userId && !user.isInGroup("admin") {
+				if user.ID != page.userId && !user.isInGroup("admin") && !user.isInGroup("editor") {
 					unauthorized(w, r)
 					return
 				}
@@ -910,7 +910,7 @@ var ImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			unauthorized(w, r)
 			return
 		}
-		if user.ID != image.UserId && !stringInSlice("admin", user.Groups) {
+		if user.ID != image.UserId && !user.isInGroup("admin") && !user.isInGroup("editor") {
 			unauthorized(w, r)
 			return
 		}
