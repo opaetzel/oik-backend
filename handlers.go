@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -99,7 +100,15 @@ var Units = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			panic(err)
 		}
 	} else {
-		//TODO: check for admin rights here
+		user, err := getUserFromRequest(r)
+		if err != nil {
+			unauthorized(w, r)
+			return
+		}
+		if !user.isInGroup("admin") {
+			unauthorized(w, r)
+			return
+		}
 		units, err := GetUnPublishedUnits()
 		if err != nil {
 			internalError(w, r, err)
@@ -180,7 +189,13 @@ var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		if page, err := GetPageById(pageId); err != nil {
-			internalError(w, r, err)
+			if err == sql.ErrNoRows {
+				notFoundError(w, r)
+				return
+			} else {
+				internalError(w, r, err)
+				return
+			}
 		} else {
 			if !page.published {
 				user, err := getUserFromRequest(r)
@@ -947,7 +962,7 @@ var DeleteRow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r, err)
 		return
 	}
-	if rowOwnerId != user.ID {
+	if rowOwnerId != user.ID && !user.isInGroup("admin") {
 		unauthorized(w, r)
 		return
 	}
