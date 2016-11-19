@@ -105,7 +105,7 @@ var Units = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			unauthorized(w, r)
 			return
 		}
-		if !user.isInGroup("admin") {
+		if !user.isInGroup("admin") && !user.isInGroup("editor") {
 			unauthorized(w, r)
 			return
 		}
