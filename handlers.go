@@ -875,7 +875,7 @@ var ImageJSONById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 			unauthorized(w, r)
 			return
 		}
-		if user.ID != image.UserId && !stringInSlice("admin", user.Groups) {
+		if user.ID != image.UserId && !user.isInGroup("admin") && !user.isInGroup("editor") {
 			unauthorized(w, r)
 			return
 		}
