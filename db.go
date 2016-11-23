@@ -368,7 +368,7 @@ func UpdateUnitUser(unit Unit) error {
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(unit.Title, unit.UnitImageID, unit.ColorScheme, unit.ID)
+	_, err = stmt.Exec(unit.Title, unit.UnitImageID, unit.ColorScheme, unit.FrontImage, unit.ID)
 	if err != nil {
 		return err
 	}
