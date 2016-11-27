@@ -59,11 +59,30 @@ type Unit struct {
 	ID          int    `json:"id" db:"id"`
 }
 
-type Cite struct {
-	Abbrev string `json:"abbrev"`
-	Text   string `json:"text"`
-	UnitID int    `json:"unit" db:"unit_id"`
-	ID     int    `json:"id"`
+type Result struct {
+	Decision     string `json:"decision"`
+	RowID        int    `json:"row"`
+	PageResultId int    `json:"pageResult`
+}
+
+type PageResult struct {
+	RowResults []Result `json:"rowResults`
+	PageId     int      `json:"page"`
+	UnitId     int      `json:"unit"`
+	UserId     int      `json:"user"`
+	Id         int      `json:"id"`
+}
+
+type UnitResult struct {
+	Decision string `json:"decision"`
+	UnitId   int    `json:"id"`
+}
+
+type UnitResults struct {
+	ProCount       int `json:"proCount"`
+	ConCount       int `json:"conCount"`
+	UndecidedCount int `json:"undecidedCount"`
+	UnitId         int `json:"unit"`
 }
 
 func (r *Image) UnmarshalJSON(data []byte) error {

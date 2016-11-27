@@ -86,6 +86,27 @@ CREATE TABLE IF NOT EXISTS user_groups (
 	user_id integer,
 	group_id integer
 );
+
+CREATE TABLE IF NOT EXISTS row_results (
+	decision varchar(15),
+	row_id integer,
+	page_result_id integer
+);
+
+CREATE TABLE IF NOT EXISTS page_results (
+	page_id integer,
+	unit_id integer,
+	user_id integer,
+	page_result_id SERIAL PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS unit_results (
+	pro_count smallint,
+	con_count smallint,
+	undecided_count smallint,
+	unit_id integer,
+	user_id integer
+);
 `
 
 func initDB(dbname string, user string, pw string) {
@@ -700,6 +721,61 @@ func RowDelete(rowId int) error {
 	return nil
 }
 
+func DbUpdatePageResult(user User, pageResult PageResult) error {
+	//TODO (maybe before calling this?) check wether page_result.user_id == user.id
+	stmt, err := db.Prepare("UPDATE row_results SET decision=$1 WHERE page_result__id=$2 AND row_id=$3")
+	if err != nil {
+		return err
+	}
+	for _, rowResult := range pageResult.RowResults {
+		_, err := stmt.Exec(rowResult.Decision, pageResult.Id, rowResult.RowID)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func DbInsertPageResult(user User, pageResult PageResult) (int, error) {
+	var pageResultId int
+	err := db.QueryRow("INSERT INTO page_results (page_id, unit_id, user_id) VALUES ($1,$2,$3) RETURNING page_result_id", pageResult.PageId, pageResult.UnitId, user.ID).Scan(&pageResultId)
+	if err != nil {
+		return -1, err
+	}
+	stmt, err := db.Prepare("INSERT INTO row_results (decision, row_id, page_result_id) VALUES ($1,$2,$3)")
+	if err != nil {
+		return -1, err
+	}
+	for _, rowResult := range pageResult.RowResults {
+		_, err := stmt.Exec(rowResult.Decision, rowResult.RowID, pageResultId)
+		if err != nil {
+			return -1, err
+		}
+	}
+	return pageResultId, nil
+}
+
+func DbGetPageResult(pageId int) (PageResult, error) {
+	//TODO
+	return PageResult{}, nil
+}
+
+func DbInsertUnitResult(user User, unitResult UnitResult) error {
+	//TODO
+	return nil
+}
+
+func DbUpdateUnitResult(user User, unitResult UnitResult) error {
+	//TODO
+	return nil
+}
+
+func DbGetUnitResult(unitId int) (UnitResult, error) {
+	//TODO
+	return UnitResult{}, nil
+}
+
+/*
 func InsertCite(cite Cite) (int, error) {
 	query := "INSERT INTO cites (abbrev, cite_text, unit_id) VALUES ($1, $2, $3) RETURNING cite_id;"
 	var userId int
@@ -733,3 +809,4 @@ func UpdateCite(cite Cite) error {
 	}
 	return nil
 }
+*/

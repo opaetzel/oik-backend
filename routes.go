@@ -82,6 +82,36 @@ var authRoutes = Routes{
 		AllUsers,
 	},
 	Route{
+		"GetPageResults",
+		"GET",
+		"/pageResults/{pageId}",
+		GetPageResult,
+	},
+	Route{
+		"InsertUnitResult",
+		"POST",
+		"/unitResults",
+		InsertUnitResult,
+	},
+	Route{
+		"UpdateUnitResult",
+		"PUT",
+		"/unitResults/{unitId}",
+		UpdateUnitResult,
+	},
+	Route{
+		"InsertPageResult",
+		"POST",
+		"/pageResults",
+		InsertPageResult,
+	},
+	Route{
+		"UpdatePageResult",
+		"PUT",
+		"/pageResults/{pageId}",
+		UpdatePageResult,
+	},
+	Route{
 		"UpdateUser",
 		"PUT",
 		"/users/{userId}",
@@ -90,6 +120,12 @@ var authRoutes = Routes{
 }
 
 var publicRoutes = Routes{
+	Route{
+		"GetUnitResults",
+		"GET",
+		"/unitResults/{unitId}",
+		GetUnitResult,
+	},
 	Route{
 		"PublishedUnits",
 		"GET",

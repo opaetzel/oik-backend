@@ -973,3 +973,182 @@ var DeleteRow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 })
+
+var InsertPageResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromRequest(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	body, err := readBody(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	var pageResult PageResult
+	if err := json.Unmarshal(*objmap["pageResult"], &pageResult); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	id, err := DbInsertPageResult(user, pageResult)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	pageResult.Id = id
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{"pageResult": pageResult}); err != nil {
+		panic(err)
+	}
+})
+
+var UpdatePageResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromRequest(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	vars := mux.Vars(r)
+	pageResultId, err := strconv.Atoi(vars["pageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	body, err := readBody(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	var pageResult PageResult
+	if err := json.Unmarshal(*objmap["pageResult"], &pageResult); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	pageResult.PageId = pageResultId
+	err = DbUpdatePageResult(user, pageResult)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write([]byte("{}")); err != nil {
+		panic(err)
+	}
+})
+
+var GetPageResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	pageId, err := strconv.Atoi(vars["pageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	pageResult, err := DbGetPageResult(pageId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{"pageResult": pageResult}); err != nil {
+		panic(err)
+	}
+})
+
+var InsertUnitResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromRequest(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	body, err := readBody(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	var unitResult UnitResult
+	if err := json.Unmarshal(*objmap["unitResult"], &unitResult); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	err = DbInsertUnitResult(user, unitResult)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{"unitResult": unitResult}); err != nil {
+		panic(err)
+	}
+})
+
+var UpdateUnitResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromRequest(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	vars := mux.Vars(r)
+	unitResultId, err := strconv.Atoi(vars["unitId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	body, err := readBody(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	var unitResult UnitResult
+	if err := json.Unmarshal(*objmap["unitResult"], &unitResult); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	unitResult.UnitId = unitResultId
+	err = DbUpdateUnitResult(user, unitResult)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write([]byte("{}")); err != nil {
+		panic(err)
+	}
+})
+
+var GetUnitResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	unitId, err := strconv.Atoi(vars["unitId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	unitResults, err := DbGetUnitResult(unitId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{"unitResults": unitResults}); err != nil {
+		panic(err)
+	}
+})
