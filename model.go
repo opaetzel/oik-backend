@@ -3,13 +3,16 @@ package main
 import "encoding/json"
 
 type Image struct {
-	path      string
-	Caption   string `json:"caption" db:"caption"`
-	Credits   string `json:"credits" db:"credits"`
-	UnitId    int    `json:"unit" db:"unit_id"`
-	UserId    int    `json:"user_id" db:"user_id"`
-	ID        int    `json:"id" db:"id"`
-	published bool
+	path        string
+	Caption     string `json:"caption" db:"caption"`
+	Credits     string `json:"credits" db:"credits"`
+	UnitId      int    `json:"unit" db:"unit_id"`
+	UserId      int    `json:"user_id" db:"user_id"`
+	ID          int    `json:"id" db:"id"`
+	published   bool
+	AgeKnown    bool `json:"ageKnown" db:"age_known"`
+	Age         int  `json:"age" db:"age"`
+	Imprecision int  `json:"imprecision" db:"imprecision"`
 }
 
 type RotateImage struct {

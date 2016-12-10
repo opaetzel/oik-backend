@@ -65,7 +65,10 @@ CREATE TABLE IF NOT EXISTS images (
 	caption text,
 	credits text,
 	unit_id integer,
-	image_id SERIAL PRIMARY KEY
+	image_id SERIAL PRIMARY KEY,
+	age_known boolean default false,
+	age integer default 0,
+	imprecision integer default 0
 );
 
 CREATE TABLE IF NOT EXISTS users (
@@ -397,11 +400,11 @@ func UpdateUnitUser(unit Unit) error {
 }
 
 func UpdateImageUser(image Image) error {
-	stmt, err := db.Prepare("UPDATE images SET caption=$1, credits=$2 WHERE image_id=$3;")
+	stmt, err := db.Prepare("UPDATE images SET caption=$1, credits=$2, age_known=$3, age=$4, imprecision=$5 WHERE image_id=$6;")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(image.Caption, image.Credits, image.ID)
+	_, err = stmt.Exec(image.Caption, image.Credits, image.AgeKnown, image.Age, image.Imprecision, image.ID)
 	if err != nil {
 		return err
 	}
@@ -438,23 +441,23 @@ func GetRotateImagePublishedAndPath(imageId int) (bool, string, error) {
 
 func GetImageById(imageId int) (Image, error) {
 	query := `
-		SELECT units.published, units.user_id, images.path, images.caption, images.credits, images.unit_id FROM units
+		SELECT units.published, units.user_id, images.path, images.caption, images.credits, images.unit_id, images.age_known, images.age, images.imprecision FROM units
 		JOIN images ON images.unit_id = units.unit_id
 		WHERE images.image_id = $1;
 		`
 	row := db.QueryRow(query, imageId)
-	var published bool
-	var userId, unitId int
+	var published, ageKnown bool
+	var userId, unitId, age, imprecision int
 	var path, caption, credits string
 	var nullPath sql.NullString
-	err := row.Scan(&published, &userId, &nullPath, &caption, &credits, &unitId)
+	err := row.Scan(&published, &userId, &nullPath, &caption, &credits, &unitId, &ageKnown, &age, &imprecision)
 	if err != nil {
 		return Image{}, err
 	}
 	if nullPath.Valid {
 		path = nullPath.String
 	}
-	return Image{path, caption, credits, unitId, userId, imageId, published}, nil
+	return Image{path, caption, credits, unitId, userId, imageId, published, ageKnown, age, imprecision}, nil
 }
 
 func GetRotateImageById(imageId int) (RotateImage, error) {
@@ -479,9 +482,9 @@ func GetRotateImageById(imageId int) (RotateImage, error) {
 }
 
 func InsertImage(image Image) (int, error) {
-	query := "INSERT INTO images (caption, credits, unit_id) VALUES ($1, $2, $3) RETURNING image_id;"
+	query := "INSERT INTO images (caption, credits, unit_id, age_known, age, imprecision) VALUES ($1, $2, $3, $4, $5, $6) RETURNING image_id;"
 	var imageId int
-	err := db.QueryRow(query, image.Caption, image.Credits, image.UnitId).Scan(&imageId)
+	err := db.QueryRow(query, image.Caption, image.Credits, image.UnitId, image.AgeKnown, image.Age, image.Imprecision).Scan(&imageId)
 	if err != nil {
 		return -1, err
 	}
