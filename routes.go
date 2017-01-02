@@ -84,7 +84,7 @@ var authRoutes = Routes{
 	Route{
 		"GetPageResults",
 		"GET",
-		"/pageResults/{pageId}",
+		"/pageResults/{pageResultId}",
 		GetPageResult,
 	},
 	Route{

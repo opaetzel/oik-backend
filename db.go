@@ -91,9 +91,10 @@ CREATE TABLE IF NOT EXISTS user_groups (
 );
 
 CREATE TABLE IF NOT EXISTS row_results (
-	decision varchar(15),
+	decision varchar(30),
 	row_id integer,
-	page_result_id integer
+	page_result_id integer,
+	row_result_id SERIAL PRIMARY KEY
 );
 
 CREATE TABLE IF NOT EXISTS page_results (
@@ -323,7 +324,7 @@ func parsePage(row *sql.Row) (Page, error) {
 			return Page{}, err
 		}
 	}
-	return Page{pageTitle, rows, unitId, page_type, pageId, userId, published}, nil
+	return Page{pageTitle, rows, unitId, page_type, pageId, userId, published, 0}, nil
 }
 
 /*
@@ -349,6 +350,38 @@ func GetPageById(id int) (Page, error) {
 		`
 	row := db.QueryRow(query, id)
 	return parsePage(row)
+}
+
+func GetPageWithResultsById(pageId, userId int) (Page, error) {
+	query := `
+		SELECT units.published, units.user_id, pages.page_title, pages.unit_id, pages.page_type, json_agg(rows.* ORDER BY rows.row_id) AS rows, page_results.page_result_id FROM pages 
+		LEFT JOIN rows ON rows.page_id = pages.page_id
+		LEFT JOIN page_results ON page_results.page_id = pages.page_id AND page_results.user_id=$2
+		RIGHT JOIN units ON units.unit_id = pages.unit_id
+		WHERE pages.page_id=$1
+		GROUP BY pages.page_id, units.unit_id, page_results.page_result_id;
+		`
+	row := db.QueryRow(query, pageId, userId)
+	var published bool
+	var pageTitle, page_type, jsonRows string
+	var unitId, pageUserId int
+	var pageResultId sql.NullInt64
+	if err := row.Scan(&published, &pageUserId, &pageTitle, &unitId, &page_type, &jsonRows, &pageResultId); err != nil {
+		return Page{}, err
+	}
+	var pageResultIdVal int
+	if pageResultId.Valid {
+		pageResultIdVal = int(pageResultId.Int64)
+	}
+	var rows []Row
+	if jsonRows == emptyArr {
+		rows = make([]Row, 0)
+	} else {
+		if err := json.Unmarshal([]byte(jsonRows), &rows); err != nil {
+			return Page{}, err
+		}
+	}
+	return Page{pageTitle, rows, unitId, page_type, pageId, pageUserId, published, pageResultIdVal}, nil
 }
 
 /*
@@ -726,7 +759,7 @@ func RowDelete(rowId int) error {
 
 func DbUpdatePageResult(user User, pageResult PageResult) error {
 	//TODO (maybe before calling this?) check wether page_result.user_id == user.id
-	stmt, err := db.Prepare("UPDATE row_results SET decision=$1 WHERE page_result__id=$2 AND row_id=$3")
+	stmt, err := db.Prepare("UPDATE row_results SET decision=$1 WHERE page_result_id=$2 AND row_id=$3")
 	if err != nil {
 		return err
 	}
@@ -758,9 +791,19 @@ func DbInsertPageResult(user User, pageResult PageResult) (int, error) {
 	return pageResultId, nil
 }
 
-func DbGetPageResult(pageId int) (PageResult, error) {
-	//TODO
-	return PageResult{}, nil
+func DbGetPageResult(pageResultId int) (PageResult, error) {
+	var unitId, pageId, userId int
+	var rowResultsAgg string
+	err := db.QueryRow("SELECT page_results.unit_id, page_results.user_id, page_results.page_id, json_agg(row_results.* ORDER BY row_results.row_id) FROM page_results LEFT JOIN row_results ON row_results.page_result_id = page_results.page_result_id WHERE page_results.page_result_id=$1 GROUP BY page_results.page_result_id", pageResultId).Scan(&unitId, &userId, &pageId, &rowResultsAgg)
+	if err != nil {
+		return PageResult{}, err
+	}
+	var rowResults []Result
+	err = json.Unmarshal([]byte(rowResultsAgg), &rowResults)
+	if err != nil {
+		return PageResult{}, err
+	}
+	return PageResult{rowResults, pageId, unitId, userId, pageResultId}, nil
 }
 
 func DbInsertUnitResult(user User, unitResult UnitResult) error {
@@ -773,12 +816,31 @@ func DbUpdateUnitResult(user User, unitResult UnitResult) error {
 	return nil
 }
 
-func DbGetUnitResult(unitId int) (UnitResult, error) {
+func DbGetUnitResults(unitId int) (UnitResult, error) {
 	//TODO
 	return UnitResult{}, nil
 }
 
 /*
+type PageResult struct {
+	RowResults []Result `json:"rowResults`
+	PageId     int      `json:"page"`
+	UnitId     int      `json:"unit"`
+	UserId     int      `json:"user"`
+	Id         int      `json:"id"`
+}
+CREATE TABLE IF NOT EXISTS row_results (
+	decision varchar(30),
+	row_id integer,
+	page_result_id integer
+);
+
+CREATE TABLE IF NOT EXISTS page_results (
+	page_id integer,
+	unit_id integer,
+	user_id integer,
+	page_result_id SERIAL PRIMARY KEY
+);
 func InsertCite(cite Cite) (int, error) {
 	query := "INSERT INTO cites (abbrev, cite_text, unit_id) VALUES ($1, $2, $3) RETURNING cite_id;"
 	var userId int

@@ -40,13 +40,14 @@ type Row struct {
 }
 
 type Page struct {
-	Title     string `json:"title" db:"title"`
-	Rows      []Row  `json:"rows" db:"rows"`
-	UnitID    int    `json:"unit" db:"unit_id"`
-	PageType  string `json:"page_type" db:"page_type"`
-	ID        int    `json:"id" db:"id"`
-	userId    int
-	published bool
+	Title        string `json:"title" db:"title"`
+	Rows         []Row  `json:"rows" db:"rows"`
+	UnitID       int    `json:"unit" db:"unit_id"`
+	PageType     string `json:"page_type" db:"page_type"`
+	ID           int    `json:"id" db:"id"`
+	userId       int
+	published    bool
+	PageResultID int `json:"pageResult" db:"page_result_id"`
 }
 
 type Unit struct {
@@ -65,11 +66,12 @@ type Unit struct {
 type Result struct {
 	Decision     string `json:"decision"`
 	RowID        int    `json:"row"`
-	PageResultId int    `json:"pageResult`
+	PageResultId int    `json:"pageResult"`
+	Id           int    `json:"id"`
 }
 
 type PageResult struct {
-	RowResults []Result `json:"rowResults`
+	RowResults []Result `json:"rowResults"`
 	PageId     int      `json:"page"`
 	UnitId     int      `json:"unit"`
 	UserId     int      `json:"user"`
@@ -172,5 +174,30 @@ func (r *Unit) UnmarshalJSON(data []byte) error {
 		r.ID = aux.MyID
 	}
 	r.PageIds = aux.MyPages
+	return nil
+}
+
+func (r *Result) UnmarshalJSON(data []byte) error {
+	type Alias Result
+	aux := &struct {
+		MyPageResult int `json:"page_result_id"`
+		MyRow        int `json:"row_id"`
+		MyId         int `json:"row_result_id"`
+		*Alias
+	}{
+		Alias: (*Alias)(r),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if r.PageResultId == 0 {
+		r.PageResultId = aux.MyPageResult
+	}
+	if r.RowID == 0 {
+		r.RowID = aux.MyRow
+	}
+	if r.Id == 0 {
+		r.Id = aux.MyId
+	}
 	return nil
 }

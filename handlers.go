@@ -184,11 +184,19 @@ var UpdateUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	user, _ := getUserFromRequest(r)
 	if pageId, err := strconv.Atoi(vars["pageId"]); err != nil {
 		notParsable(w, r, err)
 		return
 	} else {
-		if page, err := GetPageById(pageId); err != nil {
+		var page Page
+		var err error
+		if user.ID > 0 {
+			page, err = GetPageWithResultsById(pageId, user.ID)
+		} else {
+			page, err = GetPageById(pageId)
+		}
+		if err != nil {
 			if err == sql.ErrNoRows {
 				notFoundError(w, r)
 				return
@@ -196,23 +204,21 @@ var PageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				internalError(w, r, err)
 				return
 			}
-		} else {
-			if !page.published {
-				user, err := getUserFromRequest(r)
-				if err != nil {
-					log.Println(err)
-					unauthorized(w, r)
-					return
-				}
-				if user.ID != page.userId && !user.isInGroup("admin") && !user.isInGroup("editor") {
-					unauthorized(w, r)
-					return
-				}
+		}
+		if !page.published {
+			if err != nil {
+				log.Println(err)
+				unauthorized(w, r)
+				return
 			}
-			w.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(w).Encode(map[string]interface{}{"page": page}); err != nil {
-				panic(err)
+			if user.ID != page.userId && !user.isInGroup("admin") && !user.isInGroup("editor") {
+				unauthorized(w, r)
+				return
 			}
+		}
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"page": page}); err != nil {
+			panic(err)
 		}
 	}
 })
@@ -265,7 +271,7 @@ var PageCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		notParsable(w, r, err)
 		return
 	}
-	fmt.Println(page)
+	log.Println(page)
 	if insertedPage, err := InsertPage(page); err != nil {
 		internalError(w, r, err)
 	} else {
@@ -342,28 +348,28 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 			panic(err)
 		}
 	}
-	fmt.Println("bla")
+	log.Println("bla")
 	var login LoginStruct
 	body, err := readBody(r)
 	if err != nil {
 		internalError(w, r, err)
 		return
 	}
-	fmt.Println("try to unmarshal")
+	log.Println("try to unmarshal")
 	if err := json.Unmarshal(body, &login); err != nil {
 		notParsable(w, r, err)
 		return
 	} else {
-		fmt.Println("unmarshal success")
+		log.Println("unmarshal success")
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		user, err := GetUserByName(login.Username)
 		if err != nil {
-			fmt.Println("did not get user")
-			fmt.Println(err)
+			log.Println("did not get user")
+			log.Println(err)
 			loginFailed()
 			return
 		}
-		fmt.Println("got user")
+		log.Println("got user")
 		hash, err := HashPWWithSaltB64(login.Password, user.salt)
 		if err != nil {
 			loginFailed()
@@ -992,6 +998,7 @@ var InsertPageResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Requ
 	}
 	var pageResult PageResult
 	if err := json.Unmarshal(*objmap["pageResult"], &pageResult); err != nil {
+		log.Println("not parsable (pageResult)")
 		notParsable(w, r, err)
 		return
 	}
@@ -1047,16 +1054,25 @@ var UpdatePageResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Requ
 })
 
 var GetPageResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromRequest(r)
+	if err != nil {
+		log.Println(err)
+		unauthorized(w, r)
+		return
+	}
 	vars := mux.Vars(r)
-	pageId, err := strconv.Atoi(vars["pageId"])
+	pageResultId, err := strconv.Atoi(vars["pageResultId"])
 	if err != nil {
 		notParsable(w, r, err)
 		return
 	}
-	pageResult, err := DbGetPageResult(pageId)
+	pageResult, err := DbGetPageResult(pageResultId)
 	if err != nil {
 		internalError(w, r, err)
 		return
+	}
+	if pageResult.UserId != user.ID {
+		unauthorized(w, r)
 	}
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(map[string]interface{}{"pageResult": pageResult}); err != nil {
@@ -1142,7 +1158,7 @@ var GetUnitResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 		notParsable(w, r, err)
 		return
 	}
-	unitResults, err := DbGetUnitResult(unitId)
+	unitResults, err := DbGetUnitResults(unitId)
 	if err != nil {
 		internalError(w, r, err)
 		return
