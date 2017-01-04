@@ -439,7 +439,7 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	b64hash := base64.StdEncoding.EncodeToString(pwhash)
 	mailHash, err := HashPWWithSaltB64(login.Email, salt)
 	b64MailHash := base64.StdEncoding.EncodeToString(mailHash)
-	user := User{login.Username, []string{"student"}, nil, 0, salt, b64hash, false, b64MailHash}
+	user := User{login.Username, []string{"student"}, nil, 0, salt, b64hash, false, b64MailHash, 0}
 	if userId, err := InsertUser(user); err != nil {
 		internalError(w, r, err)
 		return
@@ -582,7 +582,7 @@ var CreateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 })
 
 var UploadOrUpdateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	userId, err := getUserId(r)
+	user, err := getUserFromRequest(r)
 	if err != nil {
 		notParsable(w, r, err)
 		return
@@ -599,8 +599,8 @@ var UploadOrUpdateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.R
 		internalError(w, r, err)
 		return
 	}
-	if image.UserId != userId {
-		log.Println("userid != image.userid", userId, "!=", image.UserId)
+	if image.UserId != user.ID {
+		log.Println("userid != image.userid", user.ID, "!=", image.UserId)
 		unauthorized(w, r)
 		return
 	}
@@ -740,7 +740,7 @@ Awaits an tar.gz as FormFile. Extracts and saves image files from it.
 */
 var UploadRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	log.Println("in UploadRotateImage")
-	userId, err := getUserId(r)
+	user, err := getUserFromRequest(r)
 	if err != nil {
 		notParsable(w, r, err)
 		return
@@ -758,8 +758,8 @@ var UploadRotateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Req
 		internalError(w, r, err)
 		return
 	}
-	if image.UserId != userId {
-		log.Println("userid != image.userid", userId, "!=", image.UserId)
+	if image.UserId != user.ID {
+		log.Println("userid != image.userid", user.ID, "!=", image.UserId)
 		unauthorized(w, r)
 		return
 	}

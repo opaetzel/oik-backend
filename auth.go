@@ -34,6 +34,7 @@ type User struct {
 	pwHash   string
 	Active   bool `json:"active"`
 	mailHash string
+	Points   uint `json:"points"`
 }
 
 type LoginStruct struct {
@@ -58,6 +59,41 @@ func (u User) isInGroup(group string) bool {
 
 func NewRequireRole(handler http.Handler, role string) *RequireRole {
 	return &RequireRole{handler, role}
+}
+
+func getUserFromRequest(r *http.Request) (User, error) {
+	userJWT := context.Get(r, "user")
+	if userJWT == nil {
+		return User{}, errors.New("no token in context")
+	}
+	claims, ok := userJWT.(*jwt.Token).Claims.(jwt.MapClaims)
+	if ok {
+		claimIdF, ok := claims["uid"].(float64)
+		if !ok {
+			return User{}, errors.New("could not cast uid to int")
+		}
+		claimId := int(claimIdF)
+		claimGroups, ok := claims["groups"].([]interface{})
+		if !ok {
+			return User{}, errors.New("could not parse groups")
+		}
+		groups := make([]string, len(claimGroups))
+		for i, gr := range claimGroups {
+			group, ok := gr.(string)
+			if !ok {
+				return User{}, errors.New("could not parse groups")
+			}
+			groups[i] = group
+		}
+		name, ok := claims["name"].(string)
+		if !ok {
+			return User{}, errors.New("could not parse name")
+		}
+		return User{Username: name, Groups: groups, ID: claimId}, nil
+
+	} else {
+		return User{}, errors.New("could not read claims")
+	}
 }
 
 func (r *User) UnmarshalJSON(data []byte) error {

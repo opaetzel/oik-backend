@@ -2,16 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-
-	"github.com/dgrijalva/jwt-go"
-	"github.com/gorilla/context"
 )
 
 func stringInSlice(a string, list []string) bool {
@@ -66,56 +62,6 @@ func readBody(r *http.Request) ([]byte, error) {
 		return nil, err
 	}
 	return body, nil
-}
-
-func getUserFromRequest(r *http.Request) (User, error) {
-	userJWT := context.Get(r, "user")
-	if userJWT == nil {
-		return User{}, errors.New("no token in context")
-	}
-	claims, ok := userJWT.(*jwt.Token).Claims.(jwt.MapClaims)
-	if ok {
-		claimIdF, ok := claims["uid"].(float64)
-		if !ok {
-			return User{}, errors.New("could not cast uid to int")
-		}
-		claimId := int(claimIdF)
-		claimGroups, ok := claims["groups"].([]interface{})
-		if !ok {
-			return User{}, errors.New("could not parse groups")
-		}
-		groups := make([]string, len(claimGroups))
-		for i, gr := range claimGroups {
-			group, ok := gr.(string)
-			if !ok {
-				return User{}, errors.New("could not parse groups")
-			}
-			groups[i] = group
-		}
-		name, ok := claims["name"].(string)
-		if !ok {
-			return User{}, errors.New("could not parse name")
-		}
-		return User{Username: name, Groups: groups, ID: claimId}, nil
-
-	} else {
-		return User{}, errors.New("could not read claims")
-	}
-}
-
-func getUserId(r *http.Request) (int, error) {
-	user := context.Get(r, "user")
-	claims, ok := user.(*jwt.Token).Claims.(jwt.MapClaims)
-	if ok {
-		claimIdF, ok := claims["uid"].(float64)
-		if !ok {
-			return 0, errors.New("could not cast uid to int")
-		}
-		claimId := int(claimIdF)
-		return claimId, nil
-	} else {
-		return 0, errors.New("could not read claims")
-	}
 }
 
 func notAcceptable(w http.ResponseWriter, r *http.Request) {

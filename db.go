@@ -77,7 +77,8 @@ CREATE TABLE IF NOT EXISTS users (
 	pwhash varchar(255),
 	active boolean,
 	user_id SERIAL PRIMARY KEY,
-	mailhash varchar(255)
+	mailhash varchar(255),
+	points integer DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS groups (
@@ -568,14 +569,15 @@ func InsertPage(page Page) (Page, error) {
 }
 
 func GetUserById(userId int) (User, error) {
-	query := `SELECT users.username, json_agg(DISTINCT units.unit_id) AS units, json_agg(DISTINCT groups.group_name) FROM users 
+	query := `SELECT users.username, users.points, json_agg(DISTINCT units.unit_id) AS units, json_agg(DISTINCT groups.group_name) FROM users 
 		LEFT JOIN units ON units.user_id=users.user_id 
 		LEFT JOIN user_groups ON users.user_id=user_groups.user_id 
 		LEFT JOIN groups ON user_groups.group_id = groups.group_id
 		WHERE users.user_id=$1 GROUP BY users.user_id`
 	row := db.QueryRow(query, userId)
 	var dbUsername, jsonUnits, jsonGroups string
-	err := row.Scan(&dbUsername, &jsonUnits, &jsonGroups)
+	var points uint
+	err := row.Scan(&dbUsername, &points, &jsonUnits, &jsonGroups)
 	if err != nil {
 		return User{}, err
 	}
@@ -591,7 +593,7 @@ func GetUserById(userId int) (User, error) {
 			return User{}, err
 		}
 	}
-	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId}
+	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId, Points: points}
 	return u, nil
 }
 
@@ -600,7 +602,8 @@ func GetUserByName(username string) (User, error) {
 	var dbUsername, salt, pwhash, jsonGroups, mailHash string
 	var active bool
 	var id int
-	err := row.Scan(&dbUsername, &salt, &pwhash, &active, &id, &mailHash, &jsonGroups)
+	var points uint
+	err := row.Scan(&dbUsername, &salt, &pwhash, &active, &id, &mailHash, &points, &jsonGroups)
 	if err != nil {
 		return User{}, err
 	}
@@ -608,7 +611,7 @@ func GetUserByName(username string) (User, error) {
 	if err := json.Unmarshal([]byte(jsonGroups), &groups); err != nil {
 		return User{}, err
 	}
-	u := User{dbUsername, groups, nil, id, salt, pwhash, active, mailHash}
+	u := User{dbUsername, groups, nil, id, salt, pwhash, active, mailHash, points}
 	return u, nil
 }
 
@@ -702,12 +705,11 @@ func UpdateGroups(user User) error {
 }
 
 func UserUpdateUser(user User) error {
-	//TODO find out wether active==emailVerified
-	stmt, err := db.Prepare("UPDATE users SET active=$1, username=$2 WHERE user_id=$3;")
+	stmt, err := db.Prepare("UPDATE users SET active=$1, username=$2, points=$3 WHERE user_id=$4;")
 	if err != nil {
 		return err
 	}
-	_, err = stmt.Exec(user.Active, user.Username, user.ID)
+	_, err = stmt.Exec(user.Active, user.Username, user.Points, user.ID)
 	if err != nil {
 		return err
 	}
