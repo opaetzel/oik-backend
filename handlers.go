@@ -398,6 +398,9 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 				internalError(w, r, err)
 			}
 		} else {
+			log.Println("user active:", user.Active)
+			log.Println(pwHashBytes)
+			log.Println(hash)
 			loginFailed()
 			return
 		}

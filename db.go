@@ -569,7 +569,7 @@ func InsertPage(page Page) (Page, error) {
 }
 
 func GetUserById(userId int) (User, error) {
-	query := `SELECT users.username, users.points, json_agg(DISTINCT units.unit_id) AS units, json_agg(DISTINCT groups.group_name) FROM users 
+	query := `SELECT users.username, users.points, users.active, json_agg(DISTINCT units.unit_id) AS units, json_agg(DISTINCT groups.group_name) FROM users 
 		LEFT JOIN units ON units.user_id=users.user_id 
 		LEFT JOIN user_groups ON users.user_id=user_groups.user_id 
 		LEFT JOIN groups ON user_groups.group_id = groups.group_id
@@ -577,7 +577,8 @@ func GetUserById(userId int) (User, error) {
 	row := db.QueryRow(query, userId)
 	var dbUsername, jsonUnits, jsonGroups string
 	var points uint
-	err := row.Scan(&dbUsername, &points, &jsonUnits, &jsonGroups)
+	var active bool
+	err := row.Scan(&dbUsername, &points, &active, &jsonUnits, &jsonGroups)
 	if err != nil {
 		return User{}, err
 	}
@@ -593,7 +594,7 @@ func GetUserById(userId int) (User, error) {
 			return User{}, err
 		}
 	}
-	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId, Points: points}
+	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId, Points: points, Active: active}
 	return u, nil
 }
 
