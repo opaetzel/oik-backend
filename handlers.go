@@ -442,7 +442,7 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	b64hash := base64.StdEncoding.EncodeToString(pwhash)
 	mailHash, err := HashPWWithSaltB64(login.Email, salt)
 	b64MailHash := base64.StdEncoding.EncodeToString(mailHash)
-	user := User{login.Username, []string{"student"}, nil, 0, salt, b64hash, false, b64MailHash, 0}
+	user := User{login.Username, []string{"student"}, nil, 0, salt, b64hash, false, b64MailHash, 0, 0}
 	if userId, err := InsertUser(user); err != nil {
 		internalError(w, r, err)
 		return
@@ -939,14 +939,16 @@ var AllUsers = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		internalError(w, r, err)
 		return
 	}
-	if !user.isInGroup("admin") {
-		unauthorized(w, r)
-		return
-	}
 	users, err := GetAllUsers()
 	if err != nil {
 		internalError(w, r, err)
 		return
+	}
+	if !user.isInGroup("admin") {
+		emptyGroups := make([]string, 0)
+		for idx, _ := range users {
+			users[idx].Groups = emptyGroups
+		}
 	}
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(map[string]interface{}{"users": users}); err != nil {

@@ -35,6 +35,7 @@ type User struct {
 	Active   bool `json:"active"`
 	mailHash string
 	Points   uint `json:"points"`
+	Rank     uint `json:"rank"`
 }
 
 type LoginStruct struct {

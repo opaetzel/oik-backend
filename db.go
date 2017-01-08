@@ -569,16 +569,24 @@ func InsertPage(page Page) (Page, error) {
 }
 
 func GetUserById(userId int) (User, error) {
-	query := `SELECT users.username, users.points, users.active, json_agg(DISTINCT units.unit_id) AS units, json_agg(DISTINCT groups.group_name) FROM users 
-		LEFT JOIN units ON units.user_id=users.user_id 
-		LEFT JOIN user_groups ON users.user_id=user_groups.user_id 
+	query := `SELECT uo.username, uo.points, uo.active, 
+		(
+			SELECT COUNT(*) 
+			FROM users ui
+			WHERE (ui.points, ui.user_id) >= (uo.points, uo.user_id)
+		) AS rank,
+		json_agg(DISTINCT units.unit_id) AS units, 
+		json_agg(DISTINCT groups.group_name) 
+		FROM users uo
+		LEFT JOIN units ON units.user_id=uo.user_id 
+		LEFT JOIN user_groups ON uo.user_id=user_groups.user_id 
 		LEFT JOIN groups ON user_groups.group_id = groups.group_id
-		WHERE users.user_id=$1 GROUP BY users.user_id`
+		WHERE uo.user_id=$1 GROUP BY uo.user_id`
 	row := db.QueryRow(query, userId)
 	var dbUsername, jsonUnits, jsonGroups string
-	var points uint
+	var points, rank uint
 	var active bool
-	err := row.Scan(&dbUsername, &points, &active, &jsonUnits, &jsonGroups)
+	err := row.Scan(&dbUsername, &points, &active, &rank, &jsonUnits, &jsonGroups)
 	if err != nil {
 		return User{}, err
 	}
@@ -594,7 +602,7 @@ func GetUserById(userId int) (User, error) {
 			return User{}, err
 		}
 	}
-	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId, Points: points, Active: active}
+	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId, Points: points, Active: active, Rank: rank}
 	return u, nil
 }
 
@@ -612,7 +620,7 @@ func GetUserByName(username string) (User, error) {
 	if err := json.Unmarshal([]byte(jsonGroups), &groups); err != nil {
 		return User{}, err
 	}
-	u := User{dbUsername, groups, nil, id, salt, pwhash, active, mailHash, points}
+	u := User{dbUsername, groups, nil, id, salt, pwhash, active, mailHash, points, 0}
 	return u, nil
 }
 
@@ -627,22 +635,31 @@ func InsertUser(user User) (int, error) {
 }
 
 func GetAllUsers() ([]User, error) {
-	query := `SELECT users.username, users.active, users.user_id, json_agg(DISTINCT units.unit_id) AS units, json_agg(DISTINCT groups.group_name) FROM users 
-		LEFT JOIN units ON units.user_id=users.user_id 
-		LEFT JOIN user_groups ON users.user_id=user_groups.user_id 
+	query := `SELECT uo.username, uo.active, uo.user_id, uo.points, 
+		json_agg(DISTINCT units.unit_id) AS units, 
+		json_agg(DISTINCT groups.group_name),
+		(
+			SELECT COUNT(*) 
+			FROM users ui
+			WHERE (ui.points, ui.user_id) >= (uo.points, uo.user_id)
+		) AS rank
+		FROM users uo
+		LEFT JOIN units ON units.user_id=uo.user_id 
+		LEFT JOIN user_groups ON uo.user_id=user_groups.user_id 
 		LEFT JOIN groups ON user_groups.group_id = groups.group_id
-		GROUP BY users.user_id`
+		GROUP BY uo.user_id`
 	rows, err := db.Query(query)
-	defer rows.Close()
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	users := make([]User, 0)
 	for rows.Next() {
 		var dbUsername, jsonUnits, jsonGroups string
 		var active bool
 		var userId int
-		err := rows.Scan(&dbUsername, &active, &userId, &jsonUnits, &jsonGroups)
+		var points, rank uint
+		err := rows.Scan(&dbUsername, &active, &userId, &points, &jsonUnits, &jsonGroups, &rank)
 		if err != nil {
 			return nil, err
 		}
@@ -658,7 +675,7 @@ func GetAllUsers() ([]User, error) {
 				return nil, err
 			}
 		}
-		users = append(users, User{Username: dbUsername, Units: units, Groups: groups, Active: active, ID: userId})
+		users = append(users, User{Username: dbUsername, Units: units, Groups: groups, Active: active, ID: userId, Points: points, Rank: rank})
 	}
 	return users, nil
 }
