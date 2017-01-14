@@ -37,10 +37,28 @@ var editorRoutes = Routes{
 		UpdatePage,
 	},
 	Route{
+		"PageDelete",
+		"DELETE",
+		"/pages/{pageId}",
+		DeletePage,
+	},
+	Route{
 		"DeleteRow",
 		"DELETE",
 		"/rows/{rowId}",
 		DeleteRow,
+	},
+	Route{
+		"CreateErrorImage",
+		"POST",
+		"/errorImages",
+		CreateErrorImage,
+	},
+	Route{
+		"UploadErrorImage",
+		"PUT",
+		"/errorImages/{errorImageId}",
+		UploadOrUpdateErrorImage,
 	},
 	Route{
 		"CreateImage",
@@ -161,6 +179,18 @@ var publicRoutes = Routes{
 		"GET",
 		"/get-image/{imageId}",
 		ImageById,
+	},
+	Route{
+		"GetErrorImageById",
+		"GET",
+		"/get-error-image/{imageId}",
+		ErrorImageById,
+	},
+	Route{
+		"GetErrorImage",
+		"GET",
+		"/errorImages/{imageId}",
+		ErrorImageJSONById,
 	},
 	Route{
 		"GetRotateImageObj",

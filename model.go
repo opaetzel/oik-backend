@@ -2,6 +2,22 @@ package main
 
 import "encoding/json"
 
+type ErrorImage struct {
+	path           string
+	CorrectImageId int      `json:"correctImage"`
+	Scale          float64  `json:"scale"`
+	ErrorCircles   []Circle `json:"errorCircles"`
+	UserId         int      `json:"user"`
+	ID             int      `json:"id" db:"id"`
+}
+
+type Circle struct {
+	CenterX int     `json:"centerX"`
+	CenterY int     `json:"centerY"`
+	Radius  float64 `json:"radius"`
+	ID      int     `json:"id"`
+}
+
 type Image struct {
 	path        string
 	Caption     string `json:"caption" db:"caption"`
@@ -153,6 +169,23 @@ func (r *Page) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if r.ID == 0 {
+		r.ID = aux.MyID
+	}
+	return nil
+}
+
+func (r *Circle) UnmarshalJSON(data []byte) error {
+	type Alias Circle
+	aux := &struct {
+		MyID int `json:"error_circle_id"`
+		*Alias
+	}{
+		Alias: (*Alias)(r),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	if r.ID == 0 && aux != nil {
 		r.ID = aux.MyID
 	}
 	return nil

@@ -282,6 +282,37 @@ var PageCreate = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}
 })
 
+var DeletePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	vars := mux.Vars(r)
+	pageId, err := strconv.Atoi(vars["pageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	dbUserId, err := GetPageOwner(pageId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	user, err := getUserFromRequest(r)
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	} else {
+		if dbUserId != user.ID && !user.isInGroup("admin") {
+			unauthorized(w, r)
+			return
+		}
+		err := DbDeletePage(pageId)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
+	}
+})
+
 var UpdatePage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	vars := mux.Vars(r)
@@ -584,6 +615,165 @@ var CreateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) 
 	}
 })
 
+var CreateErrorImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromRequest(r)
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	var errorImage ErrorImage
+	body, err := readBody(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	if err := json.Unmarshal(*objmap["errorImage"], &errorImage); err != nil {
+		notParsable(w, r, err)
+		return
+	} else {
+		log.Println(errorImage)
+		errorImage.UserId = user.ID
+		errorImage, err := InsertErrorImage(errorImage)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"errorImage": errorImage}); err != nil {
+			panic(err)
+		}
+	}
+})
+
+var UploadOrUpdateErrorImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	user, err := getUserFromRequest(r)
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	vars := mux.Vars(r)
+	errorImageId, err := strconv.Atoi(vars["errorImageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	log.Println("try to get errorImage owner for errorImage", errorImageId)
+	errorImage, err := GetErrorImageById(errorImageId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if errorImage.UserId != user.ID {
+		log.Println("userid != errorImage.userid", user.ID, "!=", errorImage.UserId)
+		unauthorized(w, r)
+		return
+	}
+	r.ParseMultipartForm(32 << 20)
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		//no formfile. Try to update errorImage.
+		log.Println("does not seem to be a formfile")
+		var updateErrorImage ErrorImage
+		body, err := readBody(r)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		var objmap map[string]*json.RawMessage
+		if err := json.Unmarshal(body, &objmap); err != nil {
+			notParsable(w, r, err)
+			return
+		}
+		if err := json.Unmarshal(*objmap["errorImage"], &updateErrorImage); err != nil {
+			notParsable(w, r, err)
+			return
+		}
+		updateErrorImage.ID = errorImageId
+		updateErrorImage, err = UpdateErrorImage(updateErrorImage)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"errorImage": updateErrorImage}); err != nil {
+			panic(err)
+		}
+		return
+	}
+	defer file.Close()
+	filename := (*header).Filename
+	splitFilename := strings.Split(filename, ".")
+	if len(splitFilename) < 2 {
+		log.Printf("can not accept filename: %s\n", filename)
+		notAcceptable(w, r)
+		return
+	}
+	extension := "." + strings.ToLower(splitFilename[len(splitFilename)-1])
+	if extension != ".png" && extension != ".jpeg" && extension != ".jpg" {
+		log.Printf("can not accept filename: %s\n", filename)
+		notAcceptable(w, r)
+		return
+	}
+	errorImageDir := filepath.Join(conf.ImageStorage, strconv.Itoa(errorImage.UserId))
+	os.MkdirAll(errorImageDir, 0755)
+	errorImagePath := filepath.Join(errorImageDir, strconv.Itoa(errorImage.ID)+extension)
+	outFile, err := os.Create(errorImagePath)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	defer outFile.Close()
+	_, err = io.Copy(outFile, file)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	idx := strings.LastIndex(errorImagePath, ".")
+	smallPath := errorImagePath[0:idx] + "_small" + errorImagePath[idx:len(errorImagePath)]
+	_, err = file.Seek(0, 0)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	var img goimg.Image
+	if strings.Contains(extension, "jpg") || strings.Contains(extension, "jpeg") {
+		img, err = jpeg.Decode(file)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+	} else if strings.Contains(extension, "png") {
+		img, err = png.Decode(file)
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+	}
+
+	m := resize.Thumbnail(550, 330, img, resize.Lanczos3)
+
+	smallOutFile, err := os.Create(smallPath)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	defer smallOutFile.Close()
+	jpeg.Encode(smallOutFile, m, nil)
+
+	err = UpdateErrorImagePath(errorImageId, errorImagePath)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusCreated)
+
+})
+
 var UploadOrUpdateImage = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	user, err := getUserFromRequest(r)
 	if err != nil {
@@ -865,6 +1055,38 @@ var RotateImageByIdAndNumber = http.HandlerFunc(func(w http.ResponseWriter, r *h
 	sendRotateImage(w, r, image.basepath, number)
 })
 
+var ErrorImageJSONById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	imageId, err := strconv.Atoi(vars["imageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	image, err := GetErrorImageById(imageId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	/*
+		if !image.published {
+			user, err := getUserFromRequest(r)
+			if err != nil {
+				log.Println(err)
+				unauthorized(w, r)
+				return
+			}
+			if user.ID != image.UserId && !user.isInGroup("admin") && !user.isInGroup("editor") {
+				unauthorized(w, r)
+				return
+			}
+		}
+	*/
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{"errorImage": image}); err != nil {
+		panic(err)
+	}
+})
+
 var ImageJSONById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	imageId, err := strconv.Atoi(vars["imageId"])
@@ -931,6 +1153,35 @@ var ImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		smallPath := image.path[0:idx] + "_small" + image.path[idx:len(image.path)]
 		sendImage(w, r, smallPath)
 	}
+})
+
+var ErrorImageById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	imageId, err := strconv.Atoi(vars["imageId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	image, err := GetErrorImageById(imageId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	/*
+		if !image.published {
+			user, err := getUserFromRequest(r)
+			if err != nil {
+				log.Println(err)
+				unauthorized(w, r)
+				return
+			}
+			if user.ID != image.UserId && !user.isInGroup("admin") && !user.isInGroup("editor") {
+				unauthorized(w, r)
+				return
+			}
+		}
+	*/
+	sendImage(w, r, image.path)
 })
 
 var AllUsers = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

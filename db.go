@@ -112,6 +112,22 @@ CREATE TABLE IF NOT EXISTS unit_results (
 	unit_id integer,
 	user_id integer
 );
+
+CREATE TABLE IF NOT EXISTS error_images (
+	path varchar(255),
+	correct_image_id integer,
+	scale double precision,
+	user_id integer,
+	error_image_id SERIAL PRIMARY KEY
+);
+
+CREATE TABLE IF NOT EXISTS error_circles (
+	centerX integer,
+	centerY integer,
+	radius double precision,
+	error_image_id integer,
+	error_circle_id SERIAL PRIMARY KEY
+);
 `
 
 func initDB(dbname string, user string, pw string) {
@@ -433,6 +449,38 @@ func UpdateUnitUser(unit Unit) error {
 	return nil
 }
 
+func UpdateErrorImage(errorImage ErrorImage) (ErrorImage, error) {
+	stmt, err := db.Prepare("UPDATE error_images SET correct_image_id=$1, scale=$2 WHERE error_image_id=$3;")
+	if err != nil {
+		return ErrorImage{}, err
+	}
+	_, err = stmt.Exec(errorImage.CorrectImageId, errorImage.Scale, errorImage.ID)
+	if err != nil {
+		return ErrorImage{}, err
+	}
+	stmt, err = db.Prepare("DELETE FROM error_circles WHERE error_image_id=$1;")
+	if err != nil {
+		return ErrorImage{}, err
+	}
+	_, err = stmt.Exec(errorImage.ID)
+	if err != nil {
+		return ErrorImage{}, err
+	}
+	query := "INSERT INTO error_circles (radius, centerX, centerY, error_image_id) VALUES ($1,$2,$3,$4) RETURNING error_circle_id;"
+	if err != nil {
+		return ErrorImage{}, err
+	}
+	for idx, circle := range errorImage.ErrorCircles {
+		var newId int
+		err := db.QueryRow(query, circle.Radius, circle.CenterX, circle.CenterY, errorImage.ID).Scan(&newId)
+		if err != nil {
+			return ErrorImage{}, err
+		}
+		errorImage.ErrorCircles[idx].ID = newId
+	}
+	return errorImage, nil
+}
+
 func UpdateImageUser(image Image) error {
 	stmt, err := db.Prepare("UPDATE images SET caption=$1, credits=$2, age_known=$3, age=$4, imprecision=$5 WHERE image_id=$6;")
 	if err != nil {
@@ -523,6 +571,57 @@ func InsertImage(image Image) (int, error) {
 		return -1, err
 	}
 	return int(imageId), nil
+}
+
+func InsertErrorImage(errorImage ErrorImage) (ErrorImage, error) {
+	query := "INSERT INTO error_images (path, correct_image_id, scale, user_id) VALUES ($1, $2, $3, $4) RETURNING error_image_id;"
+	var errorImageId int
+	err := db.QueryRow(query, errorImage.path, errorImage.CorrectImageId, errorImage.Scale, errorImage.UserId).Scan(&errorImageId)
+	if err != nil {
+		return ErrorImage{}, err
+	}
+	errorImage.ID = errorImageId
+	query = "INSERT INTO error_circles (radius, centerX, centerY, error_image_id) VALUES ($1,$2,$3,$4) RETURNING error_circle_id;"
+	if err != nil {
+		return ErrorImage{}, err
+	}
+	for idx, circle := range errorImage.ErrorCircles {
+		var newId int
+		err := db.QueryRow(query, circle.Radius, circle.CenterX, circle.CenterY, errorImage.ID).Scan(&newId)
+		if err != nil {
+			return ErrorImage{}, err
+		}
+		errorImage.ErrorCircles[idx].ID = newId
+	}
+	return errorImage, nil
+}
+
+func UpdateErrorImagePath(id int, path string) error {
+	stmt, err := db.Prepare("UPDATE error_images SET path=$1 WHERE error_image_id=$2;")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(path, id)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func GetErrorImageById(id int) (ErrorImage, error) {
+	query := "SELECT error_images.*, json_agg(error_circles.*) FROM error_images LEFT JOIN error_circles ON error_circles.error_image_id=error_images.error_image_id WHERE error_images.error_image_id=$1 GROUP BY error_images.error_image_id;"
+	var path, circlesAgg string
+	var scale float64
+	var dbId, correctImageId, userId int
+	err := db.QueryRow(query, id).Scan(&path, &correctImageId, &scale, &userId, &dbId, &circlesAgg)
+	if err != nil {
+		return ErrorImage{}, err
+	}
+	var errorCircles []Circle
+	if err := json.Unmarshal([]byte(circlesAgg), &errorCircles); err != nil {
+		return ErrorImage{}, err
+	}
+	return ErrorImage{path: path, CorrectImageId: correctImageId, Scale: scale, ID: dbId, ErrorCircles: errorCircles, UserId: userId}, nil
 }
 
 func InsertRotateImage(image RotateImage) (int, error) {
@@ -839,6 +938,18 @@ func DbUpdateUnitResult(user User, unitResult UnitResult) error {
 func DbGetUnitResults(unitId int) (UnitResult, error) {
 	//TODO
 	return UnitResult{}, nil
+}
+
+func DbDeletePage(pageId int) error {
+	stmt, err := db.Prepare("DELETE FROM pages WHERE page_id=$1")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(pageId)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 /*
