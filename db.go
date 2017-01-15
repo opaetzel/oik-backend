@@ -128,6 +128,16 @@ CREATE TABLE IF NOT EXISTS error_circles (
 	error_image_id integer,
 	error_circle_id SERIAL PRIMARY KEY
 );
+
+CREATE TABLE IF NOT EXISTS clicked_images (
+	user_id integer,
+	image_id integer
+);
+
+CREATE TABLE IF NOT EXISTS clicked_arguments (
+	user_id integer,
+	row_id integer
+);
 `
 
 func initDB(dbname string, user string, pw string) {
@@ -675,19 +685,39 @@ func GetUserById(userId int) (User, error) {
 			WHERE (ui.points, ui.user_id) >= (uo.points, uo.user_id)
 		) AS rank,
 		json_agg(DISTINCT units.unit_id) AS units, 
-		json_agg(DISTINCT groups.group_name) 
+		json_agg(DISTINCT groups.group_name) AS groups,
+		json_agg(DISTINCT clicked_images.image_id) AS clicked_images,
+		json_agg(DISTINCT clicked_arguments.row_id) AS clicked_arguments
 		FROM users uo
 		LEFT JOIN units ON units.user_id=uo.user_id 
+		LEFT JOIN clicked_images ON clicked_images.user_id=uo.user_id 
+		LEFT JOIN clicked_arguments ON clicked_arguments.user_id=uo.user_id 
 		LEFT JOIN user_groups ON uo.user_id=user_groups.user_id 
 		LEFT JOIN groups ON user_groups.group_id = groups.group_id
 		WHERE uo.user_id=$1 GROUP BY uo.user_id`
 	row := db.QueryRow(query, userId)
-	var dbUsername, jsonUnits, jsonGroups string
+	var dbUsername, jsonUnits, jsonGroups, jsonClickedIms, jsonClickedArgs string
 	var points, rank uint
 	var active bool
-	err := row.Scan(&dbUsername, &points, &active, &rank, &jsonUnits, &jsonGroups)
+	err := row.Scan(&dbUsername, &points, &active, &rank, &jsonUnits, &jsonGroups, &jsonClickedIms, &jsonClickedArgs)
 	if err != nil {
 		return User{}, err
+	}
+	var clickedIms []int
+	if jsonClickedIms == emptyArr {
+		clickedIms = make([]int, 0)
+	} else {
+		if err := json.Unmarshal([]byte(jsonClickedIms), &clickedIms); err != nil {
+			return User{}, err
+		}
+	}
+	var clickedArgs []int
+	if jsonClickedArgs == emptyArr {
+		clickedArgs = make([]int, 0)
+	} else {
+		if err := json.Unmarshal([]byte(jsonClickedArgs), &clickedArgs); err != nil {
+			return User{}, err
+		}
 	}
 	var groups []string
 	if err := json.Unmarshal([]byte(jsonGroups), &groups); err != nil {
@@ -701,7 +731,7 @@ func GetUserById(userId int) (User, error) {
 			return User{}, err
 		}
 	}
-	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId, Points: points, Active: active, Rank: rank}
+	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId, Points: points, Active: active, Rank: rank, ClickedImages: clickedIms, ClickedArguments: clickedArgs}
 	return u, nil
 }
 
@@ -719,7 +749,7 @@ func GetUserByName(username string) (User, error) {
 	if err := json.Unmarshal([]byte(jsonGroups), &groups); err != nil {
 		return User{}, err
 	}
-	u := User{dbUsername, groups, nil, id, salt, pwhash, active, mailHash, points, 0}
+	u := User{dbUsername, groups, nil, id, salt, pwhash, active, mailHash, points, 0, "", nil, nil}
 	return u, nil
 }
 
@@ -821,6 +851,18 @@ func UpdateGroups(user User) error {
 	return nil
 }
 
+func UpdateUserPW(user User) error {
+	stmt, err := db.Prepare("UPDATE users SET pwhash=$1 WHERE user_id=$2;")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(user.pwHash, user.ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func UserUpdateUser(user User) error {
 	stmt, err := db.Prepare("UPDATE users SET active=$1, username=$2, points=$3 WHERE user_id=$4;")
 	if err != nil {
@@ -829,6 +871,46 @@ func UserUpdateUser(user User) error {
 	_, err = stmt.Exec(user.Active, user.Username, user.Points, user.ID)
 	if err != nil {
 		return err
+	}
+	//delete all clicked images of user
+	stmt, err = db.Prepare("DELETE from clicked_images WHERE user_id=$1;")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(user.ID)
+	if err != nil {
+		return err
+	}
+	//delete all clicked arguments of user
+	stmt, err = db.Prepare("DELETE from clicked_arguments WHERE user_id=$1;")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(user.ID)
+	if err != nil {
+		return err
+	}
+	//insert clicked images
+	stmt, err = db.Prepare("INSERT INTO clicked_images (user_id, image_id) VALUES ($1, $2)")
+	if err != nil {
+		return err
+	}
+	for _, clickedIm := range user.ClickedImages {
+		_, err = stmt.Exec(user.ID, clickedIm)
+		if err != nil {
+			return err
+		}
+	}
+	//insert clicked arguments
+	stmt, err = db.Prepare("INSERT INTO clicked_arguments (user_id, row_id) VALUES ($1, $2)")
+	if err != nil {
+		return err
+	}
+	for _, rowId := range user.ClickedArguments {
+		_, err = stmt.Exec(user.ID, rowId)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

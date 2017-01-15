@@ -78,6 +78,7 @@ var UserById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	} else {
 		user, err := GetUserById(userId)
 		if err != nil {
+			log.Println(err)
 			notFound(w, r)
 			return
 		}
@@ -371,6 +372,21 @@ var LoginOptionsHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.R
 	//w.Header().Set("Acces-Control-Allow-Origin", "*")
 })
 
+func loginWithToken(w http.ResponseWriter, r *http.Request, token string) {
+	parser := jwt.Parser{[]string{jwt.SigningMethodHS256.Name}, false, false}
+	keyFunc := func(token *jwt.Token) (interface{}, error) {
+		return mySigningKey, nil
+	}
+	_, err := parser.Parse(token, keyFunc)
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{"token": token}); err != nil {
+		internalError(w, r, err)
+	}
+}
+
 var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	loginFailed := func() {
 		w.WriteHeader(http.StatusUnauthorized)
@@ -392,6 +408,10 @@ var LoginHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)
 		return
 	} else {
 		log.Println("unmarshal success")
+		if len(login.Username) == 0 {
+			loginWithToken(w, r, login.Password)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 		user, err := GetUserByName(login.Username)
 		if err != nil {
@@ -473,7 +493,7 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	b64hash := base64.StdEncoding.EncodeToString(pwhash)
 	mailHash, err := HashPWWithSaltB64(login.Email, salt)
 	b64MailHash := base64.StdEncoding.EncodeToString(mailHash)
-	user := User{login.Username, []string{"student"}, nil, 0, salt, b64hash, false, b64MailHash, 0, 0}
+	user := User{login.Username, []string{"student"}, nil, 0, salt, b64hash, false, b64MailHash, 0, 0, "", nil, nil}
 	if userId, err := InsertUser(user); err != nil {
 		internalError(w, r, err)
 		return
@@ -532,6 +552,25 @@ var UpdateUser = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}
 	claimId := int(claimIdF)
 	if user.ID == claimId {
+		if len(user.NewPw) != 0 {
+			dbUser, err := GetUserByName(user.Username)
+			pwhash, err := HashPWWithSaltB64(user.NewPw, dbUser.salt)
+			log.Println(dbUser.salt)
+			if err != nil {
+				internalError(w, r, err)
+				return
+			}
+			b64hash := base64.StdEncoding.EncodeToString(pwhash)
+			log.Println(b64hash)
+			user.pwHash = b64hash
+			user.salt = dbUser.salt
+			UpdateUserPW(user)
+			w.WriteHeader(http.StatusOK)
+			if err := json.NewEncoder(w).Encode(map[string]interface{}{"user": user}); err != nil {
+				internalError(w, r, err)
+			}
+			return
+		}
 		UserUpdateUser(user)
 		w.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(w).Encode(map[string]interface{}{"user": user}); err != nil {
@@ -1423,4 +1462,64 @@ var GetUnitResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request
 	if err := json.NewEncoder(w).Encode(map[string]interface{}{"unitResults": unitResults}); err != nil {
 		panic(err)
 	}
+})
+
+var NewPasswordRequest = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	var login LoginStruct
+	body, err := readBody(r)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	var objmap map[string]*json.RawMessage
+	if err := json.Unmarshal(body, &objmap); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	if err := json.Unmarshal(*objmap["newPasswordRequest"], &login); err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	user, err := GetUserByName(login.Username)
+	if err != nil {
+		log.Println("did not get user")
+		log.Println(err)
+		w.WriteHeader(http.StatusConflict)
+		jsonError := jsonErr{http.StatusConflict, "Username not in DB!"}
+		if err := json.NewEncoder(w).Encode(jsonError); err != nil {
+			panic(err)
+		}
+		return
+	}
+	mailHash, err := HashPWWithSaltB64(login.Email, user.salt)
+	b64MailHash := base64.StdEncoding.EncodeToString(mailHash)
+	if b64MailHash == user.mailHash {
+		token := jwt.New(jwt.SigningMethodHS256)
+		claims := make(jwt.MapClaims)
+
+		claims["groups"] = make([]string, 0)
+		claims["name"] = user.Username
+		claims["exp"] = time.Now().Add(time.Hour * 12).Unix()
+		claims["uid"] = user.ID
+
+		token.Claims = claims
+
+		tokenString, _ := token.SignedString(mySigningKey)
+		if err := sendPwRecoveryMail(login.Email, conf.AppUrl+"password-recovery/"+tokenString); err != nil {
+			log.Printf("Error sending mail\n")
+			internalError(w, r, err)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		if _, err := w.Write([]byte("{}")); err != nil {
+			panic(err)
+		}
+		return
+	}
+	w.WriteHeader(http.StatusConflict)
+	jsonError := jsonErr{http.StatusConflict, "E-Mail and username do not coincide"}
+	if err := json.NewEncoder(w).Encode(jsonError); err != nil {
+		panic(err)
+	}
+	return
 })

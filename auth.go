@@ -19,23 +19,32 @@ import (
 	"github.com/gorilla/context"
 )
 
-const mailTemplate = `To: {{.Recipient}}
+const registerMailTemplate = `To: {{.Recipient}}
 Subject: Registrierung Objekte im Kreuzverhör
 
 Bitte klicken Sie auf den Folgenden Link um Ihre Registrierung abzuschließen:
 {{.TokenLink}}`
 
+const pwRecoveryTemplate = `To: {{.Recipient}}
+Subject: Passwort Objekte im Kreuzverhör
+
+Folgender Link loggt Sie ein. Anschließend können sie Ihr Passwort ändern. Dieser Link ist für 12 Stunden gültig.
+{{.TokenLink}}`
+
 type User struct {
-	Username string   `json:"name" db:"username"`
-	Groups   []string `json:"groups" db:"groups"`
-	Units    []int    `json:"units" db:"units"`
-	ID       int      `json:"id" db:"user_id"`
-	salt     string
-	pwHash   string
-	Active   bool `json:"active"`
-	mailHash string
-	Points   uint `json:"points"`
-	Rank     uint `json:"rank"`
+	Username         string   `json:"name" db:"username"`
+	Groups           []string `json:"groups" db:"groups"`
+	Units            []int    `json:"units" db:"units"`
+	ID               int      `json:"id" db:"user_id"`
+	salt             string
+	pwHash           string
+	Active           bool `json:"active"`
+	mailHash         string
+	Points           uint   `json:"points"`
+	Rank             uint   `json:"rank"`
+	NewPw            string `json:"newPw"`
+	ClickedImages    []int  `json:"clickedImages"`
+	ClickedArguments []int  `json:"clickedArguments"`
 }
 
 type LoginStruct struct {
@@ -206,6 +215,28 @@ func HashNewPW(pw string) (salt string, hash []byte, err error) {
 	return base64.StdEncoding.EncodeToString(saltBytes), dk, err
 }
 
+func sendPwRecoveryMail(recipient string, token string) error {
+	auth := smtp.PlainAuth("", conf.MailConfig.UserName, conf.MailConfig.Password, conf.MailConfig.Host)
+	to := []string{recipient}
+	// Connect to the server, authenticate, set the sender and recipient,
+	// and send the email all in one step.
+	mailInfo := MailTemplate{recipient, token}
+	var doc bytes.Buffer
+	t, err := template.New("mail").Parse(pwRecoveryTemplate)
+	if err != nil {
+		return err
+	}
+	err = t.Execute(&doc, mailInfo)
+	if err != nil {
+		return err
+	}
+	err = smtp.SendMail(conf.MailConfig.Host+":"+strconv.Itoa(conf.MailConfig.Port), auth, conf.MailConfig.From, to, doc.Bytes())
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func sendRegistrationMail(recipient string, token string) error {
 	auth := smtp.PlainAuth("", conf.MailConfig.UserName, conf.MailConfig.Password, conf.MailConfig.Host)
 	to := []string{recipient}
@@ -213,7 +244,7 @@ func sendRegistrationMail(recipient string, token string) error {
 	// and send the email all in one step.
 	mailInfo := MailTemplate{recipient, token}
 	var doc bytes.Buffer
-	t, err := template.New("mail").Parse(mailTemplate)
+	t, err := template.New("mail").Parse(registerMailTemplate)
 	if err != nil {
 		return err
 	}

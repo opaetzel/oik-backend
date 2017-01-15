@@ -139,6 +139,12 @@ var authRoutes = Routes{
 
 var publicRoutes = Routes{
 	Route{
+		"NewPasswordRequest",
+		"POST",
+		"/newPasswordRequests",
+		NewPasswordRequest,
+	},
+	Route{
 		"GetUnitResults",
 		"GET",
 		"/unitResults/{unitId}",
