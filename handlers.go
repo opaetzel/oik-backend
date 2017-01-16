@@ -509,7 +509,7 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 		token.Claims = claims
 
 		tokenString, _ := token.SignedString(mySigningKey)
-		if err := sendRegistrationMail(login.Email, conf.AppUrl+"confirm-mail/"+tokenString); err != nil {
+		if err := sendMail(login.Email, conf.AppUrl+"confirm-mail/"+tokenString, "Registrierung Objekte im Kreuzverhör", registerMailTemplate); err != nil {
 			log.Printf("Error sending mail\n")
 			internalError(w, r, err)
 			return
@@ -1275,6 +1275,22 @@ var DeleteRow = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 })
 
+var DeleteUnit = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	//this is only called after it is checked that the user is admin, so no checking needed here
+	vars := mux.Vars(r)
+	unitId, err := strconv.Atoi(vars["unitId"])
+	if err != nil {
+		notParsable(w, r, err)
+		return
+	}
+	err = DbDeleteUnit(unitId)
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+})
+
 var InsertPageResult = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	user, err := getUserFromRequest(r)
 	if err != nil {
@@ -1505,7 +1521,7 @@ var NewPasswordRequest = http.HandlerFunc(func(w http.ResponseWriter, r *http.Re
 		token.Claims = claims
 
 		tokenString, _ := token.SignedString(mySigningKey)
-		if err := sendPwRecoveryMail(login.Email, conf.AppUrl+"password-recovery/"+tokenString); err != nil {
+		if err := sendMail(login.Email, conf.AppUrl+"password-recovery/"+tokenString, "Objekte im Kreuzverhör: Passwort wiederherstellen", pwRecoveryTemplate); err != nil {
 			log.Printf("Error sending mail\n")
 			internalError(w, r, err)
 			return

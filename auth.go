@@ -8,9 +8,9 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"net/smtp"
-	"strconv"
 	"text/template"
+
+	gomail "gopkg.in/gomail.v2"
 
 	"golang.org/x/crypto/scrypt"
 
@@ -19,16 +19,10 @@ import (
 	"github.com/gorilla/context"
 )
 
-const registerMailTemplate = `To: {{.Recipient}}
-Subject: Registrierung Objekte im Kreuzverhör
-
-Bitte klicken Sie auf den Folgenden Link um Ihre Registrierung abzuschließen:
+const registerMailTemplate = `Bitte klicken Sie auf den Folgenden Link um Ihre Registrierung abzuschließen:
 {{.TokenLink}}`
 
-const pwRecoveryTemplate = `To: {{.Recipient}}
-Subject: Passwort Objekte im Kreuzverhör
-
-Folgender Link loggt Sie ein. Anschließend können sie Ihr Passwort ändern. Dieser Link ist für 12 Stunden gültig.
+const pwRecoveryTemplate = `Folgender Link loggt Sie ein. Anschließend können sie Ihr Passwort ändern. Dieser Link ist für 12 Stunden gültig.
 {{.TokenLink}}`
 
 type User struct {
@@ -215,46 +209,29 @@ func HashNewPW(pw string) (salt string, hash []byte, err error) {
 	return base64.StdEncoding.EncodeToString(saltBytes), dk, err
 }
 
-func sendPwRecoveryMail(recipient string, token string) error {
-	auth := smtp.PlainAuth("", conf.MailConfig.UserName, conf.MailConfig.Password, conf.MailConfig.Host)
-	to := []string{recipient}
-	// Connect to the server, authenticate, set the sender and recipient,
-	// and send the email all in one step.
-	mailInfo := MailTemplate{recipient, token}
+func sendMail(recipient string, token string, subject string, mailTemplate string) error {
+	m := gomail.NewMessage()
+	m.SetHeader("From", conf.MailConfig.From)
+	m.SetHeader("To", recipient)
+	m.SetHeader("Subject", subject)
 	var doc bytes.Buffer
-	t, err := template.New("mail").Parse(pwRecoveryTemplate)
+	t, err := template.New("mail").Parse(mailTemplate)
 	if err != nil {
 		return err
 	}
+	mailInfo := MailTemplate{"", token}
 	err = t.Execute(&doc, mailInfo)
 	if err != nil {
 		return err
 	}
-	err = smtp.SendMail(conf.MailConfig.Host+":"+strconv.Itoa(conf.MailConfig.Port), auth, conf.MailConfig.From, to, doc.Bytes())
-	if err != nil {
-		return err
-	}
-	return nil
-}
+	m.SetBody("text/plain", doc.String())
 
-func sendRegistrationMail(recipient string, token string) error {
-	auth := smtp.PlainAuth("", conf.MailConfig.UserName, conf.MailConfig.Password, conf.MailConfig.Host)
-	to := []string{recipient}
-	// Connect to the server, authenticate, set the sender and recipient,
-	// and send the email all in one step.
-	mailInfo := MailTemplate{recipient, token}
-	var doc bytes.Buffer
-	t, err := template.New("mail").Parse(registerMailTemplate)
-	if err != nil {
-		return err
+	d := gomail.NewDialer(conf.MailConfig.Host, conf.MailConfig.Port, conf.MailConfig.UserName, conf.MailConfig.Password)
+
+	// Send the email to Bob, Cora and Dan.
+	if err := d.DialAndSend(m); err != nil {
+		panic(err)
 	}
-	err = t.Execute(&doc, mailInfo)
-	if err != nil {
-		return err
-	}
-	err = smtp.SendMail(conf.MailConfig.Host+":"+strconv.Itoa(conf.MailConfig.Port), auth, conf.MailConfig.From, to, doc.Bytes())
-	if err != nil {
-		return err
-	}
+
 	return nil
 }

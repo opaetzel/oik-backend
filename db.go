@@ -1022,6 +1022,18 @@ func DbGetUnitResults(unitId int) (UnitResult, error) {
 	return UnitResult{}, nil
 }
 
+func DbDeleteUnit(unitId int) error {
+	stmt, err := db.Prepare("DELETE FROM units WHERE unit_id=$1")
+	if err != nil {
+		return err
+	}
+	_, err = stmt.Exec(unitId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func DbDeletePage(pageId int) error {
 	stmt, err := db.Prepare("DELETE FROM pages WHERE page_id=$1")
 	if err != nil {

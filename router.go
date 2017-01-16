@@ -35,6 +35,11 @@ func NewRouter() *mux.Router {
 		handler = jwtRequiredMiddleware.Handler(NewRequireRole(route.Handler, "editor"))
 		registerRoute(api, route, handler)
 	}
+	for _, route := range adminRoutes {
+		var handler http.Handler
+		handler = jwtRequiredMiddleware.Handler(NewRequireRole(route.Handler, "admin"))
+		registerRoute(api, route, handler)
+	}
 
 	fs := http.Dir(conf.StaticFolder)
 	fileHandler := http.FileServer(fs)

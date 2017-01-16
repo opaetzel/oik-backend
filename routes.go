@@ -11,6 +11,15 @@ type Route struct {
 
 type Routes []Route
 
+var adminRoutes = Routes{
+	Route{
+		"UnitDelete",
+		"DELETE",
+		"/units/{unitId}",
+		DeleteUnit,
+	},
+}
+
 var editorRoutes = Routes{
 	Route{
 		"UnitCreate",
