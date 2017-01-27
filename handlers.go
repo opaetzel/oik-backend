@@ -493,7 +493,7 @@ var RegisterHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Reque
 	b64hash := base64.StdEncoding.EncodeToString(pwhash)
 	mailHash, err := HashPWWithSaltB64(login.Email, salt)
 	b64MailHash := base64.StdEncoding.EncodeToString(mailHash)
-	user := User{login.Username, []string{"student"}, nil, 0, salt, b64hash, false, b64MailHash, 0, 0, "", nil, nil}
+	user := User{login.Username, []string{"student"}, nil, 0, salt, b64hash, false, b64MailHash, 0, 0, "", nil, nil, nil}
 	if userId, err := InsertUser(user); err != nil {
 		internalError(w, r, err)
 		return

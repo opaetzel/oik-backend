@@ -687,19 +687,21 @@ func GetUserById(userId int) (User, error) {
 		json_agg(DISTINCT units.unit_id) AS units, 
 		json_agg(DISTINCT groups.group_name) AS groups,
 		json_agg(DISTINCT clicked_images.image_id) AS clicked_images,
-		json_agg(DISTINCT clicked_arguments.row_id) AS clicked_arguments
+		json_agg(DISTINCT clicked_arguments.row_id) AS clicked_arguments,
+		json_agg(DISTINCT error_images.error_image_id) AS error_images
 		FROM users uo
 		LEFT JOIN units ON units.user_id=uo.user_id 
 		LEFT JOIN clicked_images ON clicked_images.user_id=uo.user_id 
 		LEFT JOIN clicked_arguments ON clicked_arguments.user_id=uo.user_id 
+		LEFT JOIN error_images ON error_images.user_id=uo.user_id 
 		LEFT JOIN user_groups ON uo.user_id=user_groups.user_id 
 		LEFT JOIN groups ON user_groups.group_id = groups.group_id
 		WHERE uo.user_id=$1 GROUP BY uo.user_id`
 	row := db.QueryRow(query, userId)
-	var dbUsername, jsonUnits, jsonGroups, jsonClickedIms, jsonClickedArgs string
+	var dbUsername, jsonUnits, jsonGroups, jsonClickedIms, jsonClickedArgs, jsonErrorIms string
 	var points, rank uint
 	var active bool
-	err := row.Scan(&dbUsername, &points, &active, &rank, &jsonUnits, &jsonGroups, &jsonClickedIms, &jsonClickedArgs)
+	err := row.Scan(&dbUsername, &points, &active, &rank, &jsonUnits, &jsonGroups, &jsonClickedIms, &jsonClickedArgs, &jsonErrorIms)
 	if err != nil {
 		return User{}, err
 	}
@@ -719,6 +721,14 @@ func GetUserById(userId int) (User, error) {
 			return User{}, err
 		}
 	}
+	var errorIms []int
+	if jsonErrorIms == emptyArr {
+		errorIms = make([]int, 0)
+	} else {
+		if err := json.Unmarshal([]byte(jsonErrorIms), &errorIms); err != nil {
+			return User{}, err
+		}
+	}
 	var groups []string
 	if err := json.Unmarshal([]byte(jsonGroups), &groups); err != nil {
 		return User{}, err
@@ -731,7 +741,7 @@ func GetUserById(userId int) (User, error) {
 			return User{}, err
 		}
 	}
-	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId, Points: points, Active: active, Rank: rank, ClickedImages: clickedIms, ClickedArguments: clickedArgs}
+	u := User{Username: dbUsername, Units: units, Groups: groups, ID: userId, Points: points, Active: active, Rank: rank, ClickedImages: clickedIms, ClickedArguments: clickedArgs, ErrorImages: errorIms}
 	return u, nil
 }
 
@@ -749,7 +759,7 @@ func GetUserByName(username string) (User, error) {
 	if err := json.Unmarshal([]byte(jsonGroups), &groups); err != nil {
 		return User{}, err
 	}
-	u := User{dbUsername, groups, nil, id, salt, pwhash, active, mailHash, points, 0, "", nil, nil}
+	u := User{dbUsername, groups, nil, id, salt, pwhash, active, mailHash, points, 0, "", nil, nil, nil}
 	return u, nil
 }
 

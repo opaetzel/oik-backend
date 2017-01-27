@@ -39,6 +39,7 @@ type User struct {
 	NewPw            string `json:"newPw"`
 	ClickedImages    []int  `json:"clickedImages"`
 	ClickedArguments []int  `json:"clickedArguments"`
+	ErrorImages      []int  `json:"errorImages"`
 }
 
 type LoginStruct struct {
