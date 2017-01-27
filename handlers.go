@@ -1539,3 +1539,14 @@ var NewPasswordRequest = http.HandlerFunc(func(w http.ResponseWriter, r *http.Re
 	}
 	return
 })
+
+var ErrorImages = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	errorImages, err := GetErrorImages()
+	if err != nil {
+		internalError(w, r, err)
+		return
+	}
+	if err := json.NewEncoder(w).Encode(map[string]interface{}{"errorImages": errorImages}); err != nil {
+		panic(err)
+	}
+})

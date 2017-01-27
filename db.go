@@ -1046,6 +1046,34 @@ func DbDeletePage(pageId int) error {
 	return nil
 }
 
+func GetErrorImages() ([]ErrorImage, error) {
+	rows, err := db.Query("SELECT error_images.*, json_agg(error_circles.*) FROM error_images LEFT JOIN error_circles ON error_circles.error_image_id = error_images.error_image_id GROUP BY error_images.error_image_id")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var path string
+	var correctImageId int
+	var scale float64
+	var userId int
+	var id int
+	var errorCircleJson string
+	imgs := make([]ErrorImage, 0)
+	for rows.Next() {
+		err := rows.Scan(&path, &correctImageId, &scale, &userId, &id, &errorCircleJson)
+		if err != nil {
+			return nil, err
+		}
+		var errorCircles []Circle
+		err = json.Unmarshal([]byte(errorCircleJson), &errorCircles)
+		if err != nil {
+			return nil, err
+		}
+		imgs = append(imgs, ErrorImage{path, correctImageId, scale, errorCircles, userId, id})
+	}
+	return imgs, nil
+}
+
 /*
 type PageResult struct {
 	RowResults []Result `json:"rowResults`

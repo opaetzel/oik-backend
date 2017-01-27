@@ -166,6 +166,12 @@ var publicRoutes = Routes{
 		Units,
 	},
 	Route{
+		"AllErrorImages",
+		"GET",
+		"/errorImages",
+		ErrorImages,
+	},
+	Route{
 		"UnitById",
 		"GET",
 		"/units/{unitId}",
