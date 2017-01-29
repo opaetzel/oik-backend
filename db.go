@@ -118,7 +118,8 @@ CREATE TABLE IF NOT EXISTS error_images (
 	correct_image_id integer,
 	scale double precision,
 	user_id integer,
-	error_image_id SERIAL PRIMARY KEY
+	error_image_id SERIAL PRIMARY KEY,
+	published boolean NOT NULL DEFAULT false
 );
 
 CREATE TABLE IF NOT EXISTS error_circles (
@@ -460,11 +461,11 @@ func UpdateUnitUser(unit Unit) error {
 }
 
 func UpdateErrorImage(errorImage ErrorImage) (ErrorImage, error) {
-	stmt, err := db.Prepare("UPDATE error_images SET correct_image_id=$1, scale=$2 WHERE error_image_id=$3;")
+	stmt, err := db.Prepare("UPDATE error_images SET correct_image_id=$1, scale=$2, published=$3 WHERE error_image_id=$4;")
 	if err != nil {
 		return ErrorImage{}, err
 	}
-	_, err = stmt.Exec(errorImage.CorrectImageId, errorImage.Scale, errorImage.ID)
+	_, err = stmt.Exec(errorImage.CorrectImageId, errorImage.Scale, errorImage.Published, errorImage.ID)
 	if err != nil {
 		return ErrorImage{}, err
 	}
@@ -623,7 +624,8 @@ func GetErrorImageById(id int) (ErrorImage, error) {
 	var path, circlesAgg string
 	var scale float64
 	var dbId, correctImageId, userId int
-	err := db.QueryRow(query, id).Scan(&path, &correctImageId, &scale, &userId, &dbId, &circlesAgg)
+	var published bool
+	err := db.QueryRow(query, id).Scan(&path, &correctImageId, &scale, &userId, &dbId, &published, &circlesAgg)
 	if err != nil {
 		return ErrorImage{}, err
 	}
@@ -631,7 +633,7 @@ func GetErrorImageById(id int) (ErrorImage, error) {
 	if err := json.Unmarshal([]byte(circlesAgg), &errorCircles); err != nil {
 		return ErrorImage{}, err
 	}
-	return ErrorImage{path: path, CorrectImageId: correctImageId, Scale: scale, ID: dbId, ErrorCircles: errorCircles, UserId: userId}, nil
+	return ErrorImage{path: path, CorrectImageId: correctImageId, Scale: scale, ID: dbId, ErrorCircles: errorCircles, UserId: userId, Published: published}, nil
 }
 
 func InsertRotateImage(image RotateImage) (int, error) {
@@ -1068,9 +1070,10 @@ func GetErrorImages() ([]ErrorImage, error) {
 	var userId int
 	var id int
 	var errorCircleJson string
+	var published bool
 	imgs := make([]ErrorImage, 0)
 	for rows.Next() {
-		err := rows.Scan(&path, &correctImageId, &scale, &userId, &id, &errorCircleJson)
+		err := rows.Scan(&path, &correctImageId, &scale, &userId, &id, &published, &errorCircleJson)
 		if err != nil {
 			return nil, err
 		}
@@ -1079,7 +1082,7 @@ func GetErrorImages() ([]ErrorImage, error) {
 		if err != nil {
 			return nil, err
 		}
-		imgs = append(imgs, ErrorImage{path, correctImageId, scale, errorCircles, userId, id})
+		imgs = append(imgs, ErrorImage{path, correctImageId, scale, errorCircles, userId, id, published})
 	}
 	return imgs, nil
 }

@@ -9,6 +9,7 @@ type ErrorImage struct {
 	ErrorCircles   []Circle `json:"errorCircles"`
 	UserId         int      `json:"user"`
 	ID             int      `json:"id" db:"id"`
+	Published      bool     `json:"published"`
 }
 
 type Circle struct {
