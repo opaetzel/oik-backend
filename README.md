@@ -58,9 +58,9 @@ Es gibt drei Arten von Routen:
 
 In der Methode `NewRouter` in der Datei [router.go](./router.go) werden alle Routen zu einem *mux.Router hinzugefügt. Die Routen sind dann von außerhalb über das prefix `api/` gefolgt vom Pattern der jeweiligen Route erreichbar.
 
-### Autentifizierung
+### Authentifizierung
 
-Die Autentifizierung mit dem Backend funktioniert über [JWTs](https://jwt.io). Alle Methoden und structs, die etwas mit der Authentifizierung zu tun haben, liegen in [auth.go](./auth.go).
+Die Authentifizierung mit dem Backend funktioniert über [JWTs](https://jwt.io). Alle Methoden und structs, die etwas mit der Authentifizierung zu tun haben, liegen in [auth.go](./auth.go).
 
 ### Modell/Datenbank 
 
