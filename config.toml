@@ -8,3 +8,11 @@ DBUser = "oik"
 DBPassword = "changeme"
 ImageStorage = "/tmp/images"
 StaticFolder = "static/"
+AppUrl = "http://localhost:4200/app/"
+LogFile = "logs/oik_backend.log"
+[MailConfig]
+    UserName = "username"
+    Password = "changeme"
+    Host = "smtp.host.example"
+    Port = 25
+    From = "registration@oik_backend.de"
