@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 )
 
+const mb = 1024 * 1024
+
 func stringInSlice(a string, list []string) bool {
 	for _, b := range list {
 		if b == a {

@@ -87,7 +87,7 @@ var editorRoutes = Routes{
 		"/rotateImages",
 		CreateRotateImage,
 	},
-	/*	Route{
+	/*Route{
 		"UpdateRotateImages",
 		"PUT",
 		"/rotateImages/{rotateImageId}",
@@ -102,6 +102,12 @@ var editorRoutes = Routes{
 }
 
 var authRoutes = Routes{
+	Route{
+		"GetImages",
+		"GET",
+		"/images",
+		Images,
+	},
 	Route{
 		"GetUsers",
 		"GET",

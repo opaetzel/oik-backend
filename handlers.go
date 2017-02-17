@@ -88,6 +88,20 @@ var UserById = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	}
 })
 
+var Images = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ageKnownFilter := r.URL.Query().Get("filter[ageKnown]")
+	if ageKnownFilter == "true" {
+		images, err := GetAgeKnownImages()
+		if err != nil {
+			internalError(w, r, err)
+			return
+		}
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{"images": images}); err != nil {
+			panic(err)
+		}
+	}
+})
+
 var Units = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	publishedFilter := r.URL.Query().Get("filter[published]")

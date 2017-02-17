@@ -1087,7 +1087,39 @@ func GetErrorImages() ([]ErrorImage, error) {
 	return imgs, nil
 }
 
+func GetAgeKnownImages() ([]Image, error) {
+	rows, err := db.Query("SELECT images.*, units.published, units.user_id from images LEFT JOIN units ON units.unit_id=images.unit_id WHERE age_known=true")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var path, caption, credits string
+	var unitId, userId, id, age, imprecision int
+	var published, ageKnown bool
+	imgs := make([]Image, 0)
+	for rows.Next() {
+		err := rows.Scan(&path, &caption, &credits, &unitId, &id, &ageKnown, &age, &imprecision, &published, &userId)
+		if err != nil {
+			return nil, err
+		}
+		imgs = append(imgs, Image{Caption: caption, Credits: credits, UnitId: unitId, UserId: userId, ID: id, published: published, AgeKnown: ageKnown, Age: age, Imprecision: imprecision})
+	}
+	return imgs, nil
+}
+
 /*
+type Image struct {
+	path        string
+	Caption     string `json:"caption" db:"caption"`
+	Credits     string `json:"credits" db:"credits"`
+	UnitId      int    `json:"unit" db:"unit_id"`
+	UserId      int    `json:"user_id" db:"user_id"`
+	ID          int    `json:"id" db:"id"`
+	published   bool
+	AgeKnown    bool `json:"ageKnown" db:"age_known"`
+	Age         int  `json:"age" db:"age"`
+	Imprecision int  `json:"imprecision" db:"imprecision"`
+}
 type PageResult struct {
 	RowResults []Result `json:"rowResults`
 	PageId     int      `json:"page"`
